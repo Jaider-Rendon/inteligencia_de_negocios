@@ -11,7 +11,7 @@ export default function CargaDeDatos() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/etl/status");
+        const response = await fetch("http://localhost:8001/api/etl/status");
         if (response.ok) {
           const data = await response.json();
           if (data.loaded) {
@@ -38,7 +38,7 @@ export default function CargaDeDatos() {
   const handleReset = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/etl/reset", { method: "POST" });
+      const res = await fetch("http://localhost:8001/api/etl/reset", { method: "POST" });
       if (res.ok) {
         setResult(null);
         setHistory([]);
@@ -56,8 +56,8 @@ export default function CargaDeDatos() {
     setResult(null);
 
     try {
-      // Llamada al backend de FastAPI (Asumiendo que corre en localhost:8000)
-      const response = await fetch("http://localhost:8000/api/etl/load", {
+      // Llamada al backend de FastAPI (Asumiendo que corre en localhost:8001)
+      const response = await fetch("http://localhost:8001/api/etl/load", {
         method: "POST",
       });
 

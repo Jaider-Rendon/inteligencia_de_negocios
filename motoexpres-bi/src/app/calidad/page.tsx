@@ -60,7 +60,7 @@ export default function Calidad() {
       ]
     };
 
-    fetch("http://localhost:8000/api/etl/quality")
+    fetch("http://localhost:8001/api/etl/quality")
       .then(res => {
         if (!res.ok) throw new Error("Error en la red");
         return res.json();

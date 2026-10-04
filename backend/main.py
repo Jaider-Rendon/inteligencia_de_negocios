@@ -33,6 +33,10 @@ QUALITY_STATE = {
     "exactitud_peso_cero": 0,
     "exactitud_costo_mayor": 0,
     "consistencia_estado": 0,
+    "estado_variantes_orig": 8,
+    "estado_variantes_dest": 4,
+    "ciudad_variantes_orig": 28,
+    "ciudad_variantes_dest": 23,
     "completitud_servicio": 0,
     "completitud_distancia": 0,
     "integridad_cliente": 0,
@@ -217,13 +221,17 @@ def run_etl():
                 }
         
         excel_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
-        csv_path = os.path.join(DATOS_DIR, "me_fact_ordenes - me_fact_ordenes.csv")
         
-        if not os.path.exists(excel_path) or not os.path.exists(csv_path):
-            raise Exception("Archivos de origen no encontrados en la carpeta 'datos'.")
+        if not os.path.exists(excel_path):
+            raise Exception("Archivo Excel de origen no encontrado en la carpeta 'datos'.")
             
-        # 1. Cargar Dimensiones (Excel)
+        # 1. Cargar Todo (Excel)
         excel_data = pd.read_excel(excel_path, sheet_name=None)
+        
+        # === PRESERVAR ORIGINAL PARA DIAGNÓSTICO ===
+        if 'fact_ordenes' not in excel_data:
+            raise Exception("La hoja 'fact_ordenes' no existe en el archivo Excel.")
+        fact_df_original = excel_data['fact_ordenes'].copy()
         
         dim_keys = {
             "cliente": set(),
@@ -234,7 +242,9 @@ def run_etl():
         for sheet_name, df in excel_data.items():
             # Normalización (Consistencia)
             if 'cliente' in sheet_name.lower() and 'ciudad' in df.columns:
+                QUALITY_STATE["ciudad_variantes_orig"] = int(df['ciudad'].nunique())
                 df['ciudad'] = df['ciudad'].apply(normalize_text)
+                QUALITY_STATE["ciudad_variantes_dest"] = int(df['ciudad'].nunique())
 
             # Limpieza de valores numéricos guardados como texto
             for col in df.columns:
@@ -254,60 +264,88 @@ def run_etl():
             if 'cliente' in sheet_lower:
                 QUALITY_STATE["privacidad_pii"] = len(df)
 
-        # 2. Cargar Hechos (CSV)
-        fact_df = pd.read_csv(csv_path)
-        extraer_count = len(fact_df)
+        # 2. Cargar Hechos (directo de la hoja del Excel)
+        fact_df = excel_data['fact_ordenes'].copy()
+        extraer_count = len(fact_df_original)
         
         # === CONTEO DE DIAGNÓSTICO SOBRE EL ARCHIVO ORIGINAL ===
         
+        mask_problemas = pd.Series(False, index=fact_df_original.index)
+        
         # 1. Unicidad
-        QUALITY_STATE["unicidad_duplicados"] = int(extraer_count - len(fact_df.drop_duplicates(subset=['orden_id'])))
+        unicidad_mask = fact_df_original.duplicated(subset=['orden_id'], keep='first')
+        mask_problemas = mask_problemas | unicidad_mask
+        QUALITY_STATE["unicidad_duplicados"] = int(unicidad_mask.sum())
         
         # 2. Validez
-        if 'precio' in fact_df.columns:
-            QUALITY_STATE["validez_precio_formato"] = int(fact_df['precio'].astype(str).str.contains(r'\$|,', na=False, regex=True).sum())
+        if 'precio' in fact_df_original.columns:
+            mask_texto = fact_df_original['precio'].apply(lambda x: isinstance(x, str))
+            validez_mask = pd.Series(False, index=fact_df_original.index)
+            if mask_texto.any():
+                validez_mask.loc[mask_texto] = fact_df_original.loc[mask_texto, 'precio'].str.contains(r'\$|\.', na=False, regex=True)
+            mask_problemas = mask_problemas | validez_mask
+            QUALITY_STATE["validez_precio_formato"] = int(validez_mask.sum())
             
         # 3. Exactitud (Evaluación simulada)
-        if 'precio' in fact_df.columns and 'peso_kg' in fact_df.columns and 'costo' in fact_df.columns:
-            temp_precio = pd.to_numeric(fact_df['precio'].apply(clean_numeric_text), errors='coerce')
-            temp_peso = pd.to_numeric(fact_df['peso_kg'], errors='coerce')
-            temp_costo_str = fact_df['costo'].apply(clean_numeric_text) if fact_df['costo'].dtype == object else fact_df['costo']
+        if 'precio' in fact_df_original.columns and 'peso_kg' in fact_df_original.columns and 'costo' in fact_df_original.columns:
+            temp_precio = pd.to_numeric(fact_df_original['precio'].apply(clean_numeric_text), errors='coerce')
+            temp_peso = pd.to_numeric(fact_df_original['peso_kg'], errors='coerce')
+            temp_costo_str = fact_df_original['costo'].apply(clean_numeric_text) if fact_df_original['costo'].dtype == object else fact_df_original['costo']
             temp_costo = pd.to_numeric(temp_costo_str, errors='coerce')
             
-            QUALITY_STATE["exactitud_precio_neg"] = int((temp_precio < 0).sum())
-            QUALITY_STATE["exactitud_peso_cero"] = int((temp_peso == 0).sum())
-            QUALITY_STATE["exactitud_costo_mayor"] = int((temp_costo > temp_precio).sum())
+            mask_precio_neg = temp_precio < 0
+            mask_peso_cero = temp_peso == 0
+            mask_costo_mayor = (temp_costo > temp_precio) & (temp_precio >= 0)
+            
+            mask_problemas = mask_problemas | mask_precio_neg | mask_peso_cero | mask_costo_mayor
+            
+            QUALITY_STATE["exactitud_precio_neg"] = int(mask_precio_neg.sum())
+            QUALITY_STATE["exactitud_peso_cero"] = int(mask_peso_cero.sum())
+            QUALITY_STATE["exactitud_costo_mayor"] = int(mask_costo_mayor.sum())
             
         # 4. Consistencia
-        if 'estado' in fact_df.columns:
-            estado_original = fact_df['estado'].copy()
-            unique_estados = fact_df['estado'].dropna().unique()
+        if 'estado' in fact_df_original.columns:
+            estado_original = fact_df_original['estado'].copy()
+            unique_estados = fact_df_original['estado'].dropna().unique()
             mapping = {val: normalize_text(val) for val in unique_estados}
             for k, v in mapping.items():
                 if v == "En transito": mapping[k] = "En tránsito"
-            estado_mapped = fact_df['estado'].map(mapping)
-            QUALITY_STATE["consistencia_estado"] = int((estado_original.notna() & (estado_original != estado_mapped)).sum())
+            estado_mapped = fact_df_original['estado'].map(mapping)
+            
+            mask_consistencia = estado_original.notna() & (estado_original != estado_mapped)
+            mask_problemas = mask_problemas | mask_consistencia
+            
+            QUALITY_STATE["consistencia_estado"] = int(mask_consistencia.sum())
+            QUALITY_STATE["estado_variantes_orig"] = len(unique_estados)
+            QUALITY_STATE["estado_variantes_dest"] = len(set(mapping.values()))
             
         # 5. Completitud
-        if 'servicio_id' in fact_df.columns:
-            QUALITY_STATE["completitud_servicio"] = int(fact_df['servicio_id'].isna().sum())
-        if 'distancia_km' in fact_df.columns:
-            QUALITY_STATE["completitud_distancia"] = int(fact_df['distancia_km'].isna().sum())
+        if 'servicio_id' in fact_df_original.columns:
+            mask_serv = fact_df_original['servicio_id'].isna()
+            mask_problemas = mask_problemas | mask_serv
+            QUALITY_STATE["completitud_servicio"] = int(mask_serv.sum())
+        if 'distancia_km' in fact_df_original.columns:
+            mask_dist = fact_df_original['distancia_km'].isna()
+            mask_problemas = mask_problemas | mask_dist
+            QUALITY_STATE["completitud_distancia"] = int(mask_dist.sum())
             
-        # 6. Vacíos Legítimos
-        if 'horas_reales' in fact_df.columns and 'estado' in fact_df.columns:
-            vacios_mask = fact_df['horas_reales'].isna() & estado_mapped.isin(['Devuelta', 'En tránsito', 'Cancelada'])
+        # 6. Vacíos Legítimos (NO suman a filas problema)
+        if 'horas_reales' in fact_df_original.columns and 'estado' in fact_df_original.columns:
+            vacios_mask = fact_df_original['horas_reales'].isna() & estado_mapped.isin(['Devuelta', 'En tránsito', 'Cancelada'])
             QUALITY_STATE["vacios_legitimos"] = int(vacios_mask.sum())
             
         # 7. Oportunidad
-        if 'fecha_orden' in fact_df.columns:
-            fechas = pd.to_datetime(fact_df['fecha_orden'], errors='coerce')
-            QUALITY_STATE["oportunidad_fecha"] = int(((fechas.dt.year > 2026) | (fechas.dt.year < 2000)).sum())
+        if 'fecha_orden' in fact_df_original.columns:
+            fechas = pd.to_datetime(fact_df_original['fecha_orden'], errors='coerce')
+            mask_fecha = (fechas.dt.year > 2026) | (fechas.dt.year < 2000)
+            mask_problemas = mask_problemas | mask_fecha
+            QUALITY_STATE["oportunidad_fecha"] = int(mask_fecha.sum())
             
         # 8. Integridad
         for dim_prefix, fk_col in [("cliente", "cliente_id"), ("servicio", "servicio_id"), ("centro", "centro_id")]:
-            if dim_keys.get(dim_prefix) and fk_col in fact_df.columns:
-                huerfanos = ~fact_df[fk_col].isin(dim_keys[dim_prefix])
+            if dim_keys.get(dim_prefix) and fk_col in fact_df_original.columns:
+                huerfanos = ~fact_df_original[fk_col].isin(dim_keys[dim_prefix])
+                mask_problemas = mask_problemas | huerfanos
                 if fk_col == "cliente_id": QUALITY_STATE["integridad_cliente"] = int(huerfanos.sum())
                 if fk_col == "centro_id": QUALITY_STATE["integridad_centro"] = int(huerfanos.sum())
 
@@ -315,20 +353,9 @@ def run_etl():
         
         # Actualizar variables globales dependientes
         QUALITY_STATE["en_cuarentena"] = int(QUALITY_STATE.get("integridad_cliente", 0) + QUALITY_STATE.get("integridad_centro", 0) + QUALITY_STATE.get("oportunidad_fecha", 0))
-        QUALITY_STATE["filas_problema"] = int(
-            QUALITY_STATE.get("unicidad_duplicados", 0) +
-            QUALITY_STATE.get("validez_precio_formato", 0) +
-            QUALITY_STATE.get("exactitud_precio_neg", 0) +
-            QUALITY_STATE.get("exactitud_peso_cero", 0) +
-            QUALITY_STATE.get("exactitud_costo_mayor", 0) +
-            QUALITY_STATE.get("consistencia_estado", 0) +
-            QUALITY_STATE.get("completitud_servicio", 0) +
-            QUALITY_STATE.get("completitud_distancia", 0) +
-            QUALITY_STATE.get("integridad_cliente", 0) +
-            QUALITY_STATE.get("integridad_centro", 0) +
-            QUALITY_STATE.get("oportunidad_fecha", 0) +
-            QUALITY_STATE.get("privacidad_pii", 0)
-        )
+        
+        # Se cuentan las filas que tienen AL MENOS un problema (sin contar dobles)
+        QUALITY_STATE["filas_problema"] = int(mask_problemas.sum())
 
         # === FIN DE CONTEO, INICIO DE TRANSFORMACIÓN REAL ===
         
@@ -439,8 +466,8 @@ def get_quality_report():
             { "id": 3, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "precio < 0", "filas": fmt(QUALITY_STATE.get("exactitud_precio_neg", 0)), "decision": "Corregir", "badge": "green" },
             { "id": 4, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "peso_kg = 0", "filas": fmt(QUALITY_STATE.get("exactitud_peso_cero", 0)), "decision": "Marcar", "badge": "yellow" },
             { "id": 5, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "costo > precio", "filas": fmt(QUALITY_STATE.get("exactitud_costo_mayor", 0)), "decision": "Marcar", "badge": "yellow" },
-            { "id": 6, "dimension": "Consistencia", "tabla": "fact_ordenes", "regla": "estado · 9 variantes → 4", "filas": fmt(QUALITY_STATE.get("consistencia_estado", 0)), "decision": "Corregir", "badge": "green" },
-            { "id": 7, "dimension": "Consistencia", "tabla": "dim_cliente", "regla": "ciudad · 28 variantes → 23", "filas": "-", "decision": "Corregir", "badge": "green" },
+            { "id": 6, "dimension": "Consistencia", "tabla": "fact_ordenes", "regla": f"estado · {QUALITY_STATE.get('estado_variantes_orig', 8)} variantes → {QUALITY_STATE.get('estado_variantes_dest', 4)}", "filas": fmt(QUALITY_STATE.get("consistencia_estado", 0)), "decision": "Corregir", "badge": "green" },
+            { "id": 7, "dimension": "Consistencia", "tabla": "dim_cliente", "regla": f"ciudad · {QUALITY_STATE.get('ciudad_variantes_orig', 28)} variantes → {QUALITY_STATE.get('ciudad_variantes_dest', 23)}", "filas": "-", "decision": "Corregir", "badge": "green" },
             { "id": 8, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "servicio_id vacío", "filas": fmt(QUALITY_STATE.get("completitud_servicio", 0)), "decision": "Marcar", "badge": "yellow" },
             { "id": 9, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "distancia_km vacía", "filas": fmt(QUALITY_STATE.get("completitud_distancia", 0)), "decision": "Marcar", "badge": "yellow" },
             { "id": 10, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "horas_reales vacía", "regla_detalle": "Todas son órdenes devueltas, en tránsito o canceladas: no hubo entrega.", "filas": fmt(QUALITY_STATE.get("vacios_legitimos", 0)), "decision": "NO tocar", "badge": "blue" },
