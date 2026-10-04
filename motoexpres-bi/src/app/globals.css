@@ -224,6 +224,11 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideRight {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 /* DataGrid Styles */
 .data-table-container {
   background: var(--bg-card);
@@ -256,8 +261,8 @@ body {
 }
 
 .data-table th {
-  padding: 16px 24px;
-  font-size: 12px;
+  padding: 10px 16px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -267,8 +272,8 @@ body {
 }
 
 .data-table td {
-  padding: 16px 24px;
-  font-size: 14px;
+  padding: 8px 16px;
+  font-size: 13px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
   vertical-align: top;

@@ -20,12 +20,25 @@ DB_PATH = "motoexpres_bi.db"
 DATOS_DIR = os.path.join(os.path.dirname(__file__), "..", "datos")
 
 # Constante que define el número exacto de reglas de limpieza/validación aplicadas en el ETL
-REGLAS_EVALUADAS = 5
+REGLAS_EVALUADAS = 14
 
 QUALITY_STATE = {
-    "filas_problema": 3303,
-    "vacios_legitimos": 15420,
-    "en_cuarentena": 450
+    "filas_problema": 0,
+    "vacios_legitimos": 0,
+    "en_cuarentena": 0,
+    "total_extraidas": 0,
+    "unicidad_duplicados": 0,
+    "validez_precio_formato": 0,
+    "exactitud_precio_neg": 0,
+    "exactitud_peso_cero": 0,
+    "exactitud_costo_mayor": 0,
+    "consistencia_estado": 0,
+    "completitud_servicio": 0,
+    "completitud_distancia": 0,
+    "integridad_cliente": 0,
+    "integridad_centro": 0,
+    "oportunidad_fecha": 0,
+    "privacidad_pii": 0
 }
 
 import unicodedata
@@ -37,13 +50,18 @@ def normalize_text(text):
 def clean_numeric_text(val):
     """
     Detectar y convertir numéricos guardados como texto (monedas, separadores)
-    Ejemplo: '$1,546.00' -> 1546.0
+    Ejemplo Latam/Euro: '$ 69.159,00' -> 69159.0
     """
     if pd.isna(val):
         return val
     if isinstance(val, str):
-        # Remover moneda, espacios y comas de separador de miles
-        val_clean = val.replace('$', '').replace('€', '').replace(',', '').strip()
+        val_clean = val.replace('$', '').replace('€', '').strip()
+        # Formato con ambos: asumimos que '.' es separador de miles y ',' es decimal
+        if ',' in val_clean and '.' in val_clean:
+            val_clean = val_clean.replace('.', '').replace(',', '.')
+        else:
+            val_clean = val_clean.replace(',', '')
+            
         try:
             return float(val_clean)
         except ValueError:
@@ -148,7 +166,7 @@ def get_etl_status():
                 "count": count,
                 "message": "Proceso ETL completado con éxito.",
                 "pipeline": [
-                    { "id": "1. EXTRAER", "valor": fmt(count + 340), "subtitulo": "filas leídas de fact_ordenes", "is_count": True, "raw_val": count + 340 },
+                    { "id": "1. EXTRAER", "valor": fmt(QUALITY_STATE.get("total_extraidas", 183140)), "subtitulo": "filas leídas de fact_ordenes", "is_count": True, "raw_val": QUALITY_STATE.get("total_extraidas", 183140) },
                     { "id": "2. VALIDAR", "valor": f"{REGLAS_EVALUADAS} reglas", "subtitulo": "de calidad evaluadas", "is_count": False },
                     { "id": "3. TRANSFORMAR", "valor": "3 columnas", "subtitulo": "numéricas y textos normalizados", "is_count": False },
                     { "id": "4. PROTEGER", "valor": "5 columnas", "subtitulo": "de datos personales tratadas", "is_count": False },
@@ -166,16 +184,17 @@ def get_etl_status():
 
 @app.post("/api/etl/load")
 def run_etl():
+    global QUALITY_STATE
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Optimización: Verificación rápida si los datos ya están cargados
+        # Optimización: Verificación rápida si los datos ya están cargados y el reporte de calidad está listo
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='fact_ordenes'")
         if cursor.fetchone():
             cursor.execute("SELECT COUNT(*) FROM fact_ordenes")
             count = cursor.fetchone()[0]
-            if count > 0:
+            if count > 0 and QUALITY_STATE.get("total_extraidas", 0) > 0:
                 conn.close()
                 historial = log_history(0, count)
                 def fmt(n): return f"{n:,}".replace(",", ".")
@@ -184,7 +203,7 @@ def run_etl():
                     "message": "Proceso ETL completado con éxito (Optimizado - Idempotente).",
                     "registros_procesados": count,
                     "pipeline": [
-                        { "id": "1. EXTRAER", "valor": fmt(count + 340), "subtitulo": "filas leídas de fact_ordenes", "is_count": True, "raw_val": count + 340 },
+                        { "id": "1. EXTRAER", "valor": fmt(QUALITY_STATE.get("total_extraidas", 183140)), "subtitulo": "filas leídas de fact_ordenes", "is_count": True, "raw_val": QUALITY_STATE.get("total_extraidas", 183140) },
                         { "id": "2. VALIDAR", "valor": f"{REGLAS_EVALUADAS} reglas", "subtitulo": "de calidad evaluadas", "is_count": False },
                         { "id": "3. TRANSFORMAR", "valor": "3 columnas", "subtitulo": "numéricas y textos normalizados", "is_count": False },
                         { "id": "4. PROTEGER", "valor": "5 columnas", "subtitulo": "de datos personales tratadas", "is_count": False },
@@ -230,26 +249,101 @@ def run_etl():
             for key in dim_keys.keys():
                 if key in sheet_lower and len(df.columns) > 0:
                     dim_keys[key] = set(df[df.columns[0]].dropna().unique())
+            
+            # Dinámico Privacidad (solo en cliente)
+            if 'cliente' in sheet_lower:
+                QUALITY_STATE["privacidad_pii"] = len(df)
 
         # 2. Cargar Hechos (CSV)
         fact_df = pd.read_csv(csv_path)
         extraer_count = len(fact_df)
         
-        # Formatos de Texto (Validez)
-        precios_sucios = 0
+        # === CONTEO DE DIAGNÓSTICO SOBRE EL ARCHIVO ORIGINAL ===
+        
+        # 1. Unicidad
+        QUALITY_STATE["unicidad_duplicados"] = int(extraer_count - len(fact_df.drop_duplicates(subset=['orden_id'])))
+        
+        # 2. Validez
         if 'precio' in fact_df.columns:
-            precios_sucios = fact_df['precio'].astype(str).str.contains(r'\$|,', na=False, regex=True).sum()
+            QUALITY_STATE["validez_precio_formato"] = int(fact_df['precio'].astype(str).str.contains(r'\$|,', na=False, regex=True).sum())
+            
+        # 3. Exactitud (Evaluación simulada)
+        if 'precio' in fact_df.columns and 'peso_kg' in fact_df.columns and 'costo' in fact_df.columns:
+            temp_precio = pd.to_numeric(fact_df['precio'].apply(clean_numeric_text), errors='coerce')
+            temp_peso = pd.to_numeric(fact_df['peso_kg'], errors='coerce')
+            temp_costo_str = fact_df['costo'].apply(clean_numeric_text) if fact_df['costo'].dtype == object else fact_df['costo']
+            temp_costo = pd.to_numeric(temp_costo_str, errors='coerce')
+            
+            QUALITY_STATE["exactitud_precio_neg"] = int((temp_precio < 0).sum())
+            QUALITY_STATE["exactitud_peso_cero"] = int((temp_peso == 0).sum())
+            QUALITY_STATE["exactitud_costo_mayor"] = int((temp_costo > temp_precio).sum())
+            
+        # 4. Consistencia
+        if 'estado' in fact_df.columns:
+            estado_original = fact_df['estado'].copy()
+            unique_estados = fact_df['estado'].dropna().unique()
+            mapping = {val: normalize_text(val) for val in unique_estados}
+            for k, v in mapping.items():
+                if v == "En transito": mapping[k] = "En tránsito"
+            estado_mapped = fact_df['estado'].map(mapping)
+            QUALITY_STATE["consistencia_estado"] = int((estado_original.notna() & (estado_original != estado_mapped)).sum())
+            
+        # 5. Completitud
+        if 'servicio_id' in fact_df.columns:
+            QUALITY_STATE["completitud_servicio"] = int(fact_df['servicio_id'].isna().sum())
+        if 'distancia_km' in fact_df.columns:
+            QUALITY_STATE["completitud_distancia"] = int(fact_df['distancia_km'].isna().sum())
+            
+        # 6. Vacíos Legítimos
+        if 'horas_reales' in fact_df.columns and 'estado' in fact_df.columns:
+            vacios_mask = fact_df['horas_reales'].isna() & estado_mapped.isin(['Devuelta', 'En tránsito', 'Cancelada'])
+            QUALITY_STATE["vacios_legitimos"] = int(vacios_mask.sum())
+            
+        # 7. Oportunidad
+        if 'fecha_orden' in fact_df.columns:
+            fechas = pd.to_datetime(fact_df['fecha_orden'], errors='coerce')
+            QUALITY_STATE["oportunidad_fecha"] = int(((fechas.dt.year > 2026) | (fechas.dt.year < 2000)).sum())
+            
+        # 8. Integridad
+        for dim_prefix, fk_col in [("cliente", "cliente_id"), ("servicio", "servicio_id"), ("centro", "centro_id")]:
+            if dim_keys.get(dim_prefix) and fk_col in fact_df.columns:
+                huerfanos = ~fact_df[fk_col].isin(dim_keys[dim_prefix])
+                if fk_col == "cliente_id": QUALITY_STATE["integridad_cliente"] = int(huerfanos.sum())
+                if fk_col == "centro_id": QUALITY_STATE["integridad_centro"] = int(huerfanos.sum())
+
+        QUALITY_STATE["total_extraidas"] = extraer_count
+        
+        # Actualizar variables globales dependientes
+        QUALITY_STATE["en_cuarentena"] = int(QUALITY_STATE.get("integridad_cliente", 0) + QUALITY_STATE.get("integridad_centro", 0) + QUALITY_STATE.get("oportunidad_fecha", 0))
+        QUALITY_STATE["filas_problema"] = int(
+            QUALITY_STATE.get("unicidad_duplicados", 0) +
+            QUALITY_STATE.get("validez_precio_formato", 0) +
+            QUALITY_STATE.get("exactitud_precio_neg", 0) +
+            QUALITY_STATE.get("exactitud_peso_cero", 0) +
+            QUALITY_STATE.get("exactitud_costo_mayor", 0) +
+            QUALITY_STATE.get("consistencia_estado", 0) +
+            QUALITY_STATE.get("completitud_servicio", 0) +
+            QUALITY_STATE.get("completitud_distancia", 0) +
+            QUALITY_STATE.get("integridad_cliente", 0) +
+            QUALITY_STATE.get("integridad_centro", 0) +
+            QUALITY_STATE.get("oportunidad_fecha", 0) +
+            QUALITY_STATE.get("privacidad_pii", 0)
+        )
+
+        # === FIN DE CONTEO, INICIO DE TRANSFORMACIÓN REAL ===
         
         # ELIMINAR DUPLICADOS EN LA LLAVE PRIMARIA
         fact_df = fact_df.drop_duplicates(subset=['orden_id'], keep='last')
+        
         # Limpieza de métricas clave guardadas como texto en el CSV
         numeric_cols = ["precio", "costo", "peso_kg", "distancia_km", "horas_prometidas", "horas_reales"]
         for col in numeric_cols:
             if col in fact_df.columns:
-                fact_df[col] = fact_df[col].apply(clean_numeric_text)
+                if fact_df[col].dtype == object:
+                    fact_df[col] = fact_df[col].apply(clean_numeric_text)
                 fact_df[col] = pd.to_numeric(fact_df[col], errors='coerce')
-                
-        # Valores Imposibles (Exactitud)
+
+        # Valores Imposibles (Cuarentena general)
         imposibles_mask = pd.Series(False, index=fact_df.index)
         if all(c in fact_df.columns for c in ['precio', 'peso_kg', 'costo']):
             imposibles_mask = (fact_df['precio'] < 0) | (fact_df['peso_kg'] == 0) | (fact_df['costo'] > fact_df['precio'])
@@ -257,32 +351,25 @@ def run_etl():
         cuarentena_count = imposibles_mask.sum()
         fact_df = fact_df[~imposibles_mask]
         
-        validar_count = len(fact_df)
-        
         # Normalización (Consistencia)
         if 'estado' in fact_df.columns:
-            fact_df['estado'] = fact_df['estado'].apply(normalize_text)
-
-        # Ajuste de Vacíos Legítimos
-        vacios_legitimos_count = 0
-        if 'horas_reales' in fact_df.columns and 'estado' in fact_df.columns:
-            vacios_mask = fact_df['horas_reales'].isna() & fact_df['estado'].isin(['Devuelta', 'En transito', 'Cancelada'])
-            vacios_legitimos_count = vacios_mask.sum()
-
-        # Actualizar variables globales de métricas
-        global QUALITY_STATE
-        QUALITY_STATE["filas_problema"] = int(precios_sucios + cuarentena_count + 340) # 340 son los duplicados eliminados
-        QUALITY_STATE["en_cuarentena"] = int(cuarentena_count)
-        QUALITY_STATE["vacios_legitimos"] = int(vacios_legitimos_count)
+            unique_estados = fact_df['estado'].dropna().unique()
+            mapping = {val: normalize_text(val) for val in unique_estados}
+            # Excepción de negocio: Preservar la tilde
+            for k, v in mapping.items():
+                if v == "En transito":
+                    mapping[k] = "En tránsito"
+            
+            fact_df['estado'] = fact_df['estado'].map(mapping)
         
         # 3. Manejo de Llaves Huérfanas
         # Asignamos al registro "Desconocido" (-1) si la llave no existe en la dimensión
         stats_huerfanas = {}
         for dim_prefix, fk_col in [("cliente", "cliente_id"), ("servicio", "servicio_id"), ("centro", "centro_id")]:
             if dim_keys[dim_prefix] and fk_col in fact_df.columns:
-                # Contar huérfanos
                 huerfanos = ~fact_df[fk_col].isin(dim_keys[dim_prefix])
                 stats_huerfanas[fk_col] = int(huerfanos.sum())
+                
                 # Asignar -1
                 fact_df.loc[huerfanos, fk_col] = -1
                 
@@ -338,6 +425,7 @@ def get_quality_report():
     Retorna la información estática / analítica sobre el diagnóstico de calidad y la bitácora de limpieza,
     incluyendo justificaciones (como los campos nulos legítimos) y tratamiento de fechas.
     """
+    def fmt(n): return f"{n:,}".replace(",", ".")
     return {
         "resumen": {
             "reglas_revisadas": REGLAS_EVALUADAS,
@@ -346,41 +434,20 @@ def get_quality_report():
             "en_cuarentena": QUALITY_STATE["en_cuarentena"]
         },
         "diagnostico": [
-            {
-                "id": 1,
-                "dimension": "Completitud",
-                "conteo_errores": 15420,
-                "decision": "Ignorados. Nulos legítimos en 'horas_reales' debido a órdenes con estado 'Devuelta' o 'En tránsito'.",
-                "badge": "blue"
-            },
-            {
-                "id": 2,
-                "dimension": "Exactitud",
-                "conteo_errores": 450,
-                "decision": "Fechas de orden fuera de rango (ej. > 2026) truncadas a fecha actual.",
-                "badge": "yellow"
-            },
-            {
-                "id": 3,
-                "dimension": "Consistencia",
-                "conteo_errores": 2841,
-                "decision": "Campos numéricos (precio/costo) con símbolos de moneda detectados y limpiados.",
-                "badge": "green"
-            },
-            {
-                "id": 4,
-                "dimension": "Unicidad",
-                "conteo_errores": 0,
-                "decision": "No se hallaron duplicados en orden_id.",
-                "badge": "green"
-            },
-            {
-                "id": 5,
-                "dimension": "Oportunidad",
-                "conteo_errores": 12,
-                "decision": "Registros muy antiguos (> 5 años) conservados para histórico.",
-                "badge": "purple"
-            }
+            { "id": 1, "dimension": "Unicidad", "tabla": "fact_ordenes", "regla": "fila completa", "filas": fmt(QUALITY_STATE.get("unicidad_duplicados", 0)), "decision": "Eliminar", "badge": "green" },
+            { "id": 2, "dimension": "Validez", "tabla": "fact_ordenes", "regla": 'precio con "$" y puntos', "filas": fmt(QUALITY_STATE.get("validez_precio_formato", 0)), "decision": "Corregir", "badge": "green" },
+            { "id": 3, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "precio < 0", "filas": fmt(QUALITY_STATE.get("exactitud_precio_neg", 0)), "decision": "Corregir", "badge": "green" },
+            { "id": 4, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "peso_kg = 0", "filas": fmt(QUALITY_STATE.get("exactitud_peso_cero", 0)), "decision": "Marcar", "badge": "yellow" },
+            { "id": 5, "dimension": "Exactitud", "tabla": "fact_ordenes", "regla": "costo > precio", "filas": fmt(QUALITY_STATE.get("exactitud_costo_mayor", 0)), "decision": "Marcar", "badge": "yellow" },
+            { "id": 6, "dimension": "Consistencia", "tabla": "fact_ordenes", "regla": "estado · 9 variantes → 4", "filas": fmt(QUALITY_STATE.get("consistencia_estado", 0)), "decision": "Corregir", "badge": "green" },
+            { "id": 7, "dimension": "Consistencia", "tabla": "dim_cliente", "regla": "ciudad · 28 variantes → 23", "filas": "-", "decision": "Corregir", "badge": "green" },
+            { "id": 8, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "servicio_id vacío", "filas": fmt(QUALITY_STATE.get("completitud_servicio", 0)), "decision": "Marcar", "badge": "yellow" },
+            { "id": 9, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "distancia_km vacía", "filas": fmt(QUALITY_STATE.get("completitud_distancia", 0)), "decision": "Marcar", "badge": "yellow" },
+            { "id": 10, "dimension": "Completitud", "tabla": "fact_ordenes", "regla": "horas_reales vacía", "regla_detalle": "Todas son órdenes devueltas, en tránsito o canceladas: no hubo entrega.", "filas": fmt(QUALITY_STATE.get("vacios_legitimos", 0)), "decision": "NO tocar", "badge": "blue" },
+            { "id": 11, "dimension": "Integridad", "tabla": "fact_ordenes", "regla": "cliente_id sin cliente", "filas": fmt(QUALITY_STATE.get("integridad_cliente", 0)), "decision": "Cuarentena", "badge": "yellow" },
+            { "id": 12, "dimension": "Integridad", "tabla": "fact_ordenes", "regla": "centro_id = 99", "filas": fmt(QUALITY_STATE.get("integridad_centro", 0)), "decision": "Cuarentena", "badge": "yellow" },
+            { "id": 13, "dimension": "Oportunidad", "tabla": "fact_ordenes", "regla": "fecha en 2027 o 1999", "filas": fmt(QUALITY_STATE.get("oportunidad_fecha", 0)), "decision": "Cuarentena", "badge": "yellow" },
+            { "id": 14, "dimension": "Privacidad", "tabla": "dim_cliente", "regla": "nombre, NIT, contacto, email, teléfono", "filas": fmt(QUALITY_STATE.get("privacidad_pii", 0)), "decision": "Retirar", "badge": "green" }
         ],
         "bitacora": [
             {
