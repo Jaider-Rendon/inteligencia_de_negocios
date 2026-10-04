@@ -5,7 +5,10 @@ import { useEffect, useState } from "react";
 interface Diagnostico {
   id: number;
   dimension: string;
-  conteo_errores: number;
+  tabla: string;
+  regla: string;
+  regla_detalle?: string;
+  filas: string | number;
   decision: string;
   badge: string;
 }
@@ -46,11 +49,8 @@ export default function Calidad() {
         en_cuarentena: 450
       },
       diagnostico: [
-        { id: 1, dimension: "Completitud", conteo_errores: 15420, decision: "Ignorados. Nulos legítimos en 'horas_reales' debido a órdenes con estado 'Devuelta' o 'En tránsito'.", badge: "blue" },
-        { id: 2, dimension: "Exactitud", conteo_errores: 450, decision: "Fechas de orden fuera de rango (ej. > 2026) truncadas a fecha actual.", badge: "yellow" },
-        { id: 3, dimension: "Consistencia", conteo_errores: 2841, decision: "Campos numéricos (precio/costo) con símbolos de moneda detectados y limpiados.", badge: "green" },
-        { id: 4, dimension: "Unicidad", conteo_errores: 0, decision: "No se hallaron duplicados en orden_id.", badge: "green" },
-        { id: 5, dimension: "Oportunidad", conteo_errores: 12, decision: "Registros muy antiguos (> 5 años) conservados para histórico.", badge: "purple" }
+        { id: 1, dimension: "Unicidad", tabla: "fact_ordenes", regla: "fila completa", filas: "340", decision: "Eliminar", badge: "green" },
+        { id: 2, dimension: "Validez", tabla: "fact_ordenes", regla: 'precio con "$" y puntos', filas: "509", decision: "Corregir", badge: "green" }
       ],
       bitacora: [
         { id: 1, que_corrigio: "Conversión de tipos en Precio, Costo, Distancia y Peso", que_no_corrigio: "N/A", por_que: "Contenían formatos de texto ($1,000.00) impidiendo operaciones matemáticas.", responsable: "Ing. de Datos (Pipeline)" },
@@ -75,6 +75,18 @@ export default function Calidad() {
         setLoading(false);
       });
   }, []);
+
+  const rulesPerDimension = data?.diagnostico.reduce((acc, row) => {
+    if (!acc.has(row.dimension)) {
+      acc.set(row.dimension, 0);
+    }
+    acc.set(row.dimension, acc.get(row.dimension)! + 1);
+    return acc;
+  }, new Map<string, number>()) || new Map();
+
+  const chartData = Array.from(rulesPerDimension.entries()).map(([name, count]) => ({ name, count }));
+  
+  const maxRules = chartData.length > 0 ? Math.max(...chartData.map(d => d.count)) : 1;
 
   return (
     <>
@@ -124,25 +136,69 @@ export default function Calidad() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "20%" }}>Dimensión</th>
-                      <th style={{ width: "15%", textAlign: "right" }}>Conteo de Errores</th>
-                      <th style={{ width: "65%" }}>Decisión Tomada</th>
+                      <th style={{ width: "15%" }}>DIMENSIÓN</th>
+                      <th style={{ width: "15%" }}>TABLA</th>
+                      <th style={{ width: "45%" }}>REGLA</th>
+                      <th style={{ width: "10%", textAlign: "right" }}>FILAS</th>
+                      <th style={{ width: "15%", textAlign: "right" }}>DECISIÓN</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data?.diagnostico.map((row) => (
                       <tr key={row.id}>
+                        <td>{row.dimension}</td>
+                        <td>{row.tabla}</td>
                         <td>
-                          <span className={`badge ${row.badge}`}>{row.dimension}</span>
+                          <div style={{ fontWeight: 500 }}>{row.regla}</div>
+                          {row.regla_detalle && <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>{row.regla_detalle}</div>}
                         </td>
-                        <td style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: "500", color: row.conteo_errores > 0 ? "#f87171" : "#34d399" }}>
-                          {row.conteo_errores.toLocaleString()}
+                        <td style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: "500" }}>
+                          {row.filas}
                         </td>
-                        <td>{row.decision}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <span className={`badge ${row.badge}`}>{row.decision}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Gráfico: Reglas aplicadas por dimensión */}
+            <div className="data-table-container">
+              <div className="data-table-header">
+                <h2 className="data-table-title">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+                  Reglas Aplicadas por Dimensión
+                </h2>
+              </div>
+              <div style={{ padding: "16px 24px" }}>
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {chartData.map((d, i) => (
+                    <div key={d.name} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "110px", fontSize: "12px", fontWeight: "600", color: "var(--text-primary)" }}>
+                        {d.name}
+                      </div>
+                      <div style={{ flex: 1, height: "12px", background: "rgba(255,255,255,0.03)", borderRadius: "6px", overflow: "hidden", position: "relative", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)" }}>
+                        <div style={{
+                          width: `${(d.count / maxRules) * 100}%`,
+                          height: "100%",
+                          background: `linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)`,
+                          borderRadius: "6px",
+                          transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)",
+                          animation: `slideRight 1s ease-out forwards`,
+                          animationDelay: `${i * 0.1}s`,
+                          transformOrigin: "left",
+                          boxShadow: "0 0 10px rgba(59, 130, 246, 0.3)"
+                        }}></div>
+                      </div>
+                      <div style={{ width: "32px", textAlign: "right", fontSize: "12px", fontWeight: "700", color: "var(--text-primary)", background: "rgba(59, 130, 246, 0.1)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+                        {d.count}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
