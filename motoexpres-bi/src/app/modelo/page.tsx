@@ -86,6 +86,20 @@ export default function Modelo() {
     return "var(--text-muted)";
   };
 
+  const renderRelacion = (relacionText: string) => {
+    const parts = relacionText.split("→");
+    if (parts.length === 2) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ background: "#eff6ff", color: "#1e3a8a", border: "1px solid #bfdbfe", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600" }}>{parts[0].trim()}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          <span style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600" }}>{parts[1].trim()}</span>
+        </div>
+      );
+    }
+    return relacionText;
+  };
+
   return (
     <>
       <div className="top-bar" style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0", padding: "0 40px", height: "80px", display: "flex", alignItems: "center" }}>
@@ -104,7 +118,10 @@ export default function Modelo() {
           <div style={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "32px", display: "flex", flexDirection: "column", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
             
             <div style={{ marginBottom: "40px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a", margin: "0 0 4px 0" }}>Estructura del Modelo</h2>
+              <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a", margin: "0 0 4px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                Estructura del Modelo
+              </h2>
               <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>Granularidad: una fila = una orden</p>
             </div>
 
@@ -113,24 +130,36 @@ export default function Modelo() {
               {/* Fila superior (Dimensiones) */}
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "600px", zIndex: 2 }}>
                 <div className="dim-box">
-                  <div className="dim-title">dim_tiempo</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <div className="dim-title">dim_tiempo</div>
+                  </div>
                   <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_tiempo?.filas)}</div>
                 </div>
                 <div className="dim-box">
-                  <div className="dim-title">dim_cliente</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <div className="dim-title">dim_cliente</div>
+                  </div>
                   <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_cliente?.filas)}</div>
                 </div>
               </div>
 
               {/* Centro (Tabla de Hechos) */}
               <div className="fact-box" style={{ zIndex: 2 }}>
-                <div className="fact-title">fact_ordenes</div>
+                <div className="fact-title">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  fact_ordenes
+                </div>
                 <ul className="fact-list">
                   {loading ? (
                     <li>Cargando columnas...</li>
                   ) : (
                     data?.tablas?.fact_ordenes?.columnas.map((col, idx) => (
-                      <li key={idx}>{col}</li>
+                      <li key={idx}>
+                        <span style={{ color: "#94a3b8", marginRight: "8px" }}>•</span>
+                        {col}
+                      </li>
                     ))
                   )}
                 </ul>
@@ -139,21 +168,27 @@ export default function Modelo() {
               {/* Fila inferior (Dimensiones) */}
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "600px", zIndex: 2 }}>
                 <div className="dim-box">
-                  <div className="dim-title">dim_servicio</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <div className="dim-title">dim_servicio</div>
+                  </div>
                   <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_servicio?.filas)}</div>
                 </div>
                 <div className="dim-box">
-                  <div className="dim-title">dim_centro</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <div className="dim-title">dim_centro</div>
+                  </div>
                   <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_centro?.filas)}</div>
                 </div>
               </div>
 
               {/* Líneas conectoras (SVG de fondo) */}
               <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}>
-                <line x1="20%" y1="20%" x2="40%" y2="40%" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4,4" />
-                <line x1="80%" y1="20%" x2="60%" y2="40%" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4,4" />
-                <line x1="20%" y1="80%" x2="40%" y2="60%" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4,4" />
-                <line x1="80%" y1="80%" x2="60%" y2="60%" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4,4" />
+                <line x1="20%" y1="20%" x2="40%" y2="40%" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
+                <line x1="80%" y1="20%" x2="60%" y2="40%" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
+                <line x1="20%" y1="80%" x2="40%" y2="60%" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
+                <line x1="80%" y1="80%" x2="60%" y2="60%" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
               </svg>
             </div>
           </div>
@@ -162,7 +197,10 @@ export default function Modelo() {
           <div style={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "32px", display: "flex", flexDirection: "column", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
             
             <div style={{ marginBottom: "40px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a", margin: "0 0 4px 0" }}>Revisión de Integridad</h2>
+              <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a", margin: "0 0 4px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                Revisión de Integridad
+              </h2>
               <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>Auditoría de llaves foráneas</p>
             </div>
 
@@ -183,17 +221,20 @@ export default function Modelo() {
                   ) : (
                     data?.integridad?.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "16px 0", color: "#334155", fontSize: "14px", fontWeight: "500" }}>
-                          {item.relacion}
+                        <td style={{ padding: "16px 0" }}>
+                          {renderRelacion(item.relacion)}
                         </td>
-                        <td style={{ padding: "16px 0", textAlign: "right", fontFamily: "ui-monospace, monospace", fontSize: "14px", fontWeight: "600", color: getColorHex(item.color) }}>
+                        <td style={{ padding: "16px 0", textAlign: "right" }}>
                           {item.huerfanos === 0 ? (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                              0 {item.nota || ""}
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700" }}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              VÁLIDO {item.nota || ""}
                             </span>
                           ) : (
-                            `${item.huerfanos} ${item.nota || ""}`
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700" }}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                              {item.huerfanos} HUÉRFANOS {item.nota || ""}
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -203,7 +244,7 @@ export default function Modelo() {
               </table>
 
               {data?.notas_integridad && data.notas_integridad.length > 0 && (
-                <div style={{ marginTop: "24px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1", color: "#64748b", fontSize: "12px", lineHeight: "1.5", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ marginTop: "32px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", borderLeft: "3px solid #cbd5e1", color: "#64748b", fontSize: "12px", lineHeight: "1.6", display: "flex", flexDirection: "column", gap: "8px" }}>
                   {data.notas_integridad.map((nota, idx) => (
                     <span key={idx}>{nota}</span>
                   ))}
@@ -219,59 +260,73 @@ export default function Modelo() {
         .dim-box {
           background: #ffffff;
           border: 1px solid #e2e8f0;
+          border-top: 3px solid #64748b;
           border-radius: 8px;
           padding: 16px;
-          width: 150px;
+          width: 170px;
           text-align: left;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .dim-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
         }
         .dim-title {
           font-weight: 600;
           color: #0f172a;
           font-size: 13px;
-          margin-bottom: 4px;
         }
         .dim-rows {
-          color: #64748b;
+          color: #475569;
           font-size: 12px;
           font-weight: 500;
+          background: #f1f5f9;
+          display: inline-block;
+          padding: 2px 6px;
+          border-radius: 4px;
         }
         .fact-box {
           background: #ffffff;
-          border: 1px solid #1e3a8a;
-          border-radius: 10px;
+          border: 1px solid #bfdbfe;
+          border-radius: 12px;
           overflow: hidden;
-          width: 260px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+          width: 280px;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+          position: relative;
         }
         .fact-title {
-          background: #eff6ff;
-          color: #1e3a8a;
+          background: #1e3a8a;
+          color: #ffffff;
           font-weight: 600;
           font-size: 14px;
-          padding: 12px 16px;
-          border-bottom: 1px solid #bfdbfe;
+          padding: 16px;
           text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          letter-spacing: 0.02em;
         }
         .fact-list {
           list-style: none;
-          padding: 12px 16px;
+          padding: 16px;
           margin: 0;
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          max-height: 250px;
+          gap: 8px;
+          max-height: 260px;
           overflow-y: auto;
         }
         .fact-list li {
           font-size: 12px;
-          color: #475569;
+          color: #334155;
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          padding: 4px 0;
-          border-bottom: 1px dashed #f1f5f9;
-        }
-        .fact-list li:last-child {
-          border-bottom: none;
+          padding: 6px 12px;
+          background: #f8fafc;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
         }
         /* Custom scrollbar */
         .fact-list::-webkit-scrollbar {
