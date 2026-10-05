@@ -197,46 +197,47 @@ export default function Calidad() {
                   <h2 style={{ fontSize: "16px", fontWeight: "600", color: "#0f172a", margin: 0 }}>Reporte Integral de Diagnóstico</h2>
                   <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748b" }}>Detalle de las anomalías detectadas y sus reglas</p>
                 </div>
-                <div>
-                  <button style={{ background: "#ffffff", border: "1px solid #cbd5e1", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", color: "#334155", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Exportar
-                  </button>
-                </div>
               </div>
               
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#f8fafc" }}>
-                      <th style={{ padding: "14px 24px", fontWeight: "600", color: "#475569", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Dimensión</th>
-                      <th style={{ padding: "14px 24px", fontWeight: "600", color: "#475569", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Tabla Afectada</th>
-                      <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Regla Violada</th>
-                      <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right", borderBottom: "1px solid #e2e8f0" }}>Impacto (Filas)</th>
-                      <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right", borderBottom: "1px solid #e2e8f0" }}>Decisión ETL</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#475569", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Dimensión</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#475569", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Tabla Afectada</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Regla Violada</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Impacto</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Decisión</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Por qué (Justificación)</th>
+                      <th style={{ padding: "14px 20px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Responsable</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data?.diagnostico.map((row) => {
+                    {data?.diagnostico.map((row, i) => {
                       const style = getBadgeStyle(row.badge);
+                      const responsables = ["Jaider Rendon", "Juan Bernal", "Juan Cely"];
+                      const resNombre = responsables[i % responsables.length];
                       return (
-                        <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9" }} onMouseOver={(e) => e.currentTarget.style.background = "#f8fafc"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
-                          <td style={{ padding: "16px 24px", color: "#1e293b", fontWeight: "600", fontSize: "13px" }}>{row.dimension}</td>
-                          <td style={{ padding: "16px 24px", color: "#475569", fontSize: "13px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{row.tabla}</td>
-                          <td style={{ padding: "16px 24px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>{row.regla}</td>
-                          <td style={{ padding: "16px 24px", color: "#0f172a", fontWeight: "600", fontSize: "14px", textAlign: "right", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{row.filas}</td>
-                          <td style={{ padding: "16px 24px", textAlign: "right" }}>
-                            <span style={{ 
-                              background: style.bg, 
-                              color: style.color, 
-                              border: `1px solid ${style.border}`, 
-                              padding: "4px 10px", 
-                              borderRadius: "6px", 
-                              fontSize: "12px", 
-                              fontWeight: "500"
-                            }}>
+                        <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background = "#f8fafc"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                          <td style={{ padding: "16px 20px", color: "#1e293b", fontWeight: "600", fontSize: "13px" }}>{row.dimension}</td>
+                          <td style={{ padding: "16px 20px", color: "#475569", fontSize: "12px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", background: "#f8fafc", borderRadius: "6px" }}>{row.tabla}</td>
+                          <td style={{ padding: "16px 20px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>{row.regla}</td>
+                          <td style={{ padding: "16px 20px", color: "#0f172a", fontWeight: "600", fontSize: "13px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{row.filas} filas</td>
+                          <td style={{ padding: "16px 20px" }}>
+                            <span style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}`, padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>
                               {row.decision}
                             </span>
+                          </td>
+                          <td style={{ padding: "16px 20px", color: "#475569", fontSize: "12px", lineHeight: "1.4" }}>
+                            {row.decision === "Eliminar" ? "Falta información crítica irrecuperable" : "Se pudo estandarizar según catálogo"}
+                          </td>
+                          <td style={{ padding: "16px 20px", color: "#334155", fontSize: "12px", fontWeight: "500" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "700", color: "#64748b" }}>
+                                {resNombre.charAt(0)}
+                              </div>
+                              {resNombre}
+                            </div>
                           </td>
                         </tr>
                       );
