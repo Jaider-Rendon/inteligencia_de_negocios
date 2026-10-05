@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --bg-main: #0B0E14;
-  --bg-sidebar: rgba(18, 24, 38, 0.6);
-  --bg-card: #151b2b;
-  --bg-hover: rgba(59, 130, 246, 0.15);
+  --bg-main: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --text-muted: #64748b;
   
-  --accent-primary: #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.5);
+  --accent-primary: #1e3a8a;
+  --accent-glow: rgba(30, 58, 138, 0.2);
   
-  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color: #e2e8f0;
   
   --font-main: var(--font-inter), system-ui, -apple-system, sans-serif;
 }
@@ -31,9 +31,6 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   overflow: hidden;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
 }
 
 .app-container {
@@ -165,7 +162,7 @@ body {
   align-items: center;
   padding: 0 40px;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(11, 14, 20, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
@@ -193,10 +190,9 @@ body {
   justify-content: center;
   border: 1px dashed var(--border-color);
   border-radius: 20px;
-  background: rgba(21, 27, 43, 0.3);
+  background: var(--bg-hover);
   text-align: center;
   padding: 40px;
-  box-shadow: inset 0 0 40px rgba(0,0,0,0.2);
 }
 
 .empty-state-icon {
@@ -242,7 +238,7 @@ body {
 .data-table-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-hover);
 }
 
 .data-table-title {
@@ -267,7 +263,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-hover);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -284,7 +280,7 @@ body {
 }
 
 .data-table tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 

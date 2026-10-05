@@ -70,139 +70,137 @@ export default function Privacidad() {
 
   return (
     <>
-      <div className="top-bar">
-        <h1 className="page-title">Privacidad y Seguridad de Datos</h1>
+      <div className="top-bar" style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0", padding: "0 40px", height: "80px", display: "flex", alignItems: "center" }}>
+        <div>
+          <h1 className="page-title" style={{ fontSize: "22px", fontWeight: "700", color: "#1e293b", letterSpacing: "-0.5px", margin: 0 }}>Privacidad y Seguridad de Datos</h1>
+        </div>
       </div>
-      <div className="content-container">
-        <p style={{ color: "var(--text-secondary)", marginBottom: "32px", fontSize: "15px", maxWidth: "800px" }}>
-          Reporte de cumplimiento y gobernanza de datos personales (Data Privacy Report). Se detalla el tratamiento de la Información Personal Identificable (PII) para el padrón de 300 clientes de MotoExpres.
+      <div className="content-container" style={{ padding: "40px", background: "#f8fafc" }}>
+        <p style={{ color: "#475569", marginBottom: "32px", fontSize: "14px", maxWidth: "800px" }}>
+          Reporte de cumplimiento y gobernanza de datos personales (Data Privacy Report). Se detalla el tratamiento de la Información Personal Identificable (PII) para el padrón de clientes.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px" }}>
           
-          {/* Card: Técnicas de Anonimización */}
-          <div style={{ background: "var(--bg-card)", padding: "24px", borderRadius: "16px", border: "1px solid var(--border-color)", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
-            <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-primary)" }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          {/* Fila 1: Tratamiento de PII */}
+          <div style={{ background: "#ffffff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "#0f172a" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               Tratamiento de PII en dim_cliente
             </h2>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
               {loading ? (
-                <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Cargando técnicas...</div>
+                <div style={{ color: "#64748b", fontSize: "14px" }}>Cargando técnicas...</div>
               ) : (
                 data?.tecnicas.map((tec, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", paddingBottom: "12px", borderBottom: i === data.tecnicas.length - 1 ? "1px solid transparent" : "1px solid var(--border-color)" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{tec.nombre}</span>
-                    <span style={{ fontSize: "13px" }} className={`badge ${tec.badge}`}>{tec.texto}</span>
+                  <div key={i} style={{ padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <span style={{ color: "#0f172a", fontSize: "13px", fontWeight: "600" }}>{tec.nombre}</span>
+                    <span style={{ fontSize: "12px", alignSelf: "flex-start", padding: "4px 8px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "6px", color: "#475569", fontWeight: "500" }}>
+                      {tec.texto}
+                    </span>
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* Card: Prueba de Re-identificación */}
-          <div style={{ background: "var(--bg-card)", padding: "24px", borderRadius: "16px", border: "1px solid var(--border-color)", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column" }}>
-            <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-primary)" }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          {/* Fila 2: Prueba de Re-identificación */}
+          <div style={{ background: "#ffffff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "#0f172a" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
               Prueba de k-Anonimato
             </h2>
 
-            <div style={{ display: "flex", gap: "16px", flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
               {loading ? (
-                <div style={{ padding: "20px", color: "var(--text-muted)", fontSize: "14px" }}>Calculando métricas de k-anonimato...</div>
+                <div style={{ padding: "20px", color: "#64748b", fontSize: "14px" }}>Calculando métricas de k-anonimato...</div>
               ) : (
-                <>
+                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
                   {/* Panel Izquierdo */}
-                  <div style={{ flex: 1, background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px", fontWeight: "600" }}>Antes de generalizar</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: "1.4" }}>
-                      Cruce: {data?.k_anonimato.antes.cruce}
+                  <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "16px 20px" }}>
+                    <div>
+                      <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>Antes de generalizar</div>
+                      <div style={{ fontSize: "13px", color: "#475569", fontFamily: "ui-monospace, monospace" }}>Cruce: {data?.k_anonimato.antes.cruce}</div>
                     </div>
-                    
-                    <div style={{ marginTop: "auto" }}>
-                      <div style={{ fontSize: "36px", fontWeight: "800", color: "#ef4444", lineHeight: "1", marginBottom: "12px" }}>k = {data?.k_anonimato.antes.k}</div>
-                      <div style={{ width: "100%", background: "rgba(239, 68, 68, 0.1)", height: "8px", borderRadius: "4px", overflow: "hidden", marginBottom: "12px" }}>
-                        <div style={{ width: "10%", background: "#ef4444", height: "100%", borderRadius: "4px", transition: "width 1s ease" }}></div>
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#ef4444", fontWeight: "600" }}>{data?.k_anonimato.antes.unicos} clientes únicos y vulnerables</div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "20px", fontWeight: "700", color: "#b91c1c" }}>k = {data?.k_anonimato.antes.k}</div>
+                      <div style={{ fontSize: "12px", color: "#991b1b", fontWeight: "500" }}>{data?.k_anonimato.antes.unicos} vulnerables</div>
                     </div>
+                  </div>
+
+                  {/* Flecha */}
+                  <div style={{ color: "#94a3b8" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                   </div>
 
                   {/* Panel Derecho */}
-                  <div style={{ flex: 1, background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px", fontWeight: "600" }}>Después de generalizar</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: "1.4" }}>
-                      Cruce: {data?.k_anonimato.despues.cruce}
+                  <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "8px", padding: "16px 20px" }}>
+                    <div>
+                      <div style={{ fontSize: "11px", color: "#059669", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>Después de generalizar</div>
+                      <div style={{ fontSize: "13px", color: "#047857", fontFamily: "ui-monospace, monospace" }}>Cruce: {data?.k_anonimato.despues.cruce}</div>
                     </div>
-
-                    <div style={{ marginTop: "auto" }}>
-                      <div style={{ fontSize: "36px", fontWeight: "800", color: "#10b981", lineHeight: "1", marginBottom: "12px" }}>k = {data?.k_anonimato.despues.k}</div>
-                      <div style={{ width: "100%", background: "rgba(16, 185, 129, 0.1)", height: "8px", borderRadius: "4px", overflow: "hidden", marginBottom: "12px" }}>
-                        <div style={{ width: "100%", background: "#10b981", height: "100%", borderRadius: "4px", transition: "width 1s ease" }}></div>
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#10b981", fontWeight: "600" }}>{data?.k_anonimato.despues.unicos} únicos. Meta cumplida</div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "20px", fontWeight: "700", color: "#059669" }}>k = {data?.k_anonimato.despues.k}</div>
+                      <div style={{ fontSize: "12px", color: "#065f46", fontWeight: "500" }}>{data?.k_anonimato.despues.unicos} únicos. Cumple.</div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
-          
         </div>
 
         {/* Tabla Clasificación de columnas */}
-        <div style={{ background: "rgba(30, 41, 59, 0.3)", borderRadius: "20px", border: "1px solid rgba(255, 255, 255, 0.05)", animation: "slideUp 0.8s ease", overflow: "hidden", marginBottom: "40px", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.5)" }}>
-          <div style={{ padding: "24px 28px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: "4px", background: "rgba(0,0,0,0.2)" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#f8fafc", letterSpacing: "0.5px" }}>Clasificación de columnas</h2>
-            <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>dim_cliente · qué se hizo con cada una</span>
+        <div style={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: "40px", boxShadow: "0 1px 3px 0 rgba(0,0,0,0.05)" }}>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "4px", background: "#f8fafc" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "600", color: "#0f172a", margin: 0 }}>Clasificación de columnas</h2>
+            <span style={{ fontSize: "13px", color: "#64748b" }}>dim_cliente · qué se hizo con cada una</span>
           </div>
           
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                  <th style={{ padding: "16px 28px", fontWeight: "600", color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Columna</th>
-                  <th style={{ padding: "16px 28px", fontWeight: "600", color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Tipo</th>
-                  <th style={{ padding: "16px 28px", fontWeight: "600", color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Acción</th>
+                <tr style={{ background: "#ffffff" }}>
+                  <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Columna</th>
+                  <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Tipo</th>
+                  <th style={{ padding: "14px 24px", fontWeight: "600", color: "#64748b", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0" }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>
                       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
-                        <svg className="spinner" viewBox="0 0 50 50" width="20" height="20" style={{ animation: "spin 1s linear infinite", color: "#3b82f6" }}>
-                          <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" />
-                        </svg>
                         Analizando columnas dinámicamente...
                       </div>
                     </td>
                   </tr>
                 ) : (
                   data?.columnas?.map((row, i) => (
-                    <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.02)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
-                      <td style={{ padding: "16px 28px", color: "#cbd5e1", fontSize: "14px", fontFamily: "monospace" }}>{row.nombre}</td>
-                      <td style={{ padding: "16px 28px" }}>
+                    <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }} onMouseOver={(e) => e.currentTarget.style.background = "#f8fafc"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                      <td style={{ padding: "16px 24px", color: "#334155", fontSize: "13px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontWeight: "500" }}>{row.nombre}</td>
+                      <td style={{ padding: "16px 24px" }}>
                         <span style={{
-                          background: row.tipo === "Identificador directo" ? "rgba(239, 68, 68, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                          color: row.tipo === "Identificador directo" ? "#ef4444" : "#f59e0b",
-                          padding: "6px 12px",
-                          borderRadius: "8px",
+                          background: row.tipo === "Identificador directo" ? "#fef2f2" : "#fffbeb",
+                          color: row.tipo === "Identificador directo" ? "#b91c1c" : "#d97706",
+                          border: row.tipo === "Identificador directo" ? "1px solid #fecaca" : "1px solid #fde68a",
+                          padding: "4px 10px",
+                          borderRadius: "6px",
                           fontSize: "12px",
-                          fontWeight: "600"
+                          fontWeight: "500"
                         }}>
                           {row.tipo}
                         </span>
                       </td>
-                      <td style={{ padding: "16px 28px", color: "var(--text-secondary)", fontSize: "14px" }}>{row.accion}</td>
+                      <td style={{ padding: "16px 24px", color: "#475569", fontSize: "13px" }}>{row.accion}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-          <div style={{ padding: "16px 28px", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: "13px", color: "var(--text-muted)" }}>
+          <div style={{ padding: "16px 24px", borderTop: "1px solid #e2e8f0", fontSize: "12px", color: "#64748b", background: "#f8fafc" }}>
             Seudonimizar el NIT con hash permite unir tablas sin mostrar el dato. No es anonimizar: con la tabla de equivalencias se revierte, así que esa tabla no se sube al repositorio.
           </div>
         </div>
