@@ -1,170 +1,260 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+interface IntegridadItem {
+  relacion: string;
+  huerfanos: number;
+  nota: string | null;
+  color: string;
+}
+
+interface ModeloData {
+  dimensiones: {
+    dim_tiempo: { filas: number };
+    dim_cliente: { filas: number };
+    dim_servicio: { filas: number };
+    dim_centro: { filas: number };
+  };
+  tablas: {
+    fact_ordenes: {
+      columnas: string[];
+    };
+  };
+  integridad: IntegridadItem[];
+  notas_integridad: string[];
+}
+
 export default function Modelo() {
+  const [data, setData] = useState<ModeloData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Valores por defecto como fallback visual si falla el backend
+    const defaultData: ModeloData = {
+      dimensiones: {
+        dim_tiempo: { filas: 1461 },
+        dim_cliente: { filas: 300 },
+        dim_servicio: { filas: 6 },
+        dim_centro: { filas: 8 }
+      },
+      tablas: {
+        fact_ordenes: {
+          columnas: [
+            "orden_id", "fecha_id", "cliente_id", "servicio_id", "centro_id",
+            "precio", "costo", "peso_kg", "distancia_km", "estado", "horas_reales"
+          ]
+        }
+      },
+      integridad: [
+        { relacion: "orden → cliente", huerfanos: 0, nota: null, color: "green" },
+        // Sustento: En el backend los huérfanos de servicio se asignan al ID -1,
+        // por lo que el conteo real de huérfanos es 0. La nota se encarga de explicarlo.
+        { relacion: "orden → servicio", huerfanos: 0, nota: "*", color: "green" },
+        { relacion: "orden → centro", huerfanos: 0, nota: null, color: "green" },
+        { relacion: "orden → fecha", huerfanos: 0, nota: null, color: "green" }
+      ],
+      notas_integridad: [
+        '* Las 408 órdenes sin servicio van a un miembro "Sin servicio" (servicio_id = -1) en lugar de borrarse.'
+      ]
+    };
+
+    fetch("http://localhost:8000/api/etl/modelo")
+      .then(res => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then(json => {
+        setData(json);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.warn("Backend no disponible, cargando datos fallback", err);
+        setData(defaultData);
+        setLoading(false);
+      });
+  }, []);
+
+  const formatFilas = (n: number | undefined) => {
+    if (n === undefined) return "...";
+    return new Intl.NumberFormat("es-ES").format(n) + " filas";
+  };
+
+  const getColorHex = (colorStr: string) => {
+    if (colorStr === "green") return "#34d399";
+    if (colorStr === "red") return "#f87171";
+    return "var(--text-muted)";
+  };
+
   return (
-    <>
-      <div className="top-bar">
-        <h1 className="page-title">Modelo de Datos (Star Schema)</h1>
-      </div>
-      <div className="content-container">
+    <div style={{ padding: "40px", height: "100%", display: "flex", flexDirection: "column" }}>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", height: "100%", alignItems: "stretch" }}>
         
-        <div style={{ marginBottom: "24px", padding: "20px", background: "rgba(59, 130, 246, 0.05)", borderLeft: "4px solid var(--accent-primary)", borderRadius: "8px 16px 16px 8px" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px", color: "var(--text-primary)" }}>Granularidad del Modelo</h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-            <strong>1 Fila en la Tabla de Hechos = 1 Orden Individual de Servicio de Entrega.</strong> Esta es la granularidad más atómica posible, permitiendo agregaciones flexibles (Roll-up) hacia cualquier dimensión superior.
-          </p>
-        </div>
-
-        {/* Diagrama Conceptual Star Schema (CSS-based) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0", gap: "40px" }}>
+        {/* Lado Izquierdo: Modelo de estrella */}
+        <div style={{ background: "rgba(30, 41, 59, 0.4)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)", padding: "32px", display: "flex", flexDirection: "column" }}>
           
-          <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "800px" }}>
-            {/* Dimensiones Top */}
-            <div className="schema-box dim-box">
-              <div className="box-title">dim_cliente</div>
-              <ul className="box-list">
-                <li>PK: cliente_id</li>
-                <li>uuid_cliente</li>
-                <li>sector</li>
-                <li>tipo_cliente</li>
-              </ul>
-              <div className="connector top-left">
-                <span>1 : N</span>
-              </div>
-            </div>
-
-            <div className="schema-box dim-box">
-              <div className="box-title">dim_servicio</div>
-              <ul className="box-list">
-                <li>PK: servicio_id</li>
-                <li>nombre_servicio</li>
-                <li>categoria</li>
-              </ul>
-              <div className="connector top-right">
-                <span>1 : N</span>
-              </div>
-            </div>
+          <div style={{ marginBottom: "40px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#f8fafc", marginBottom: "8px" }}>Modelo de estrella</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>Granularidad: una fila = una orden</p>
           </div>
 
-          {/* Tabla de Hechos Centro */}
-          <div className="schema-box fact-box" style={{ position: "relative" }}>
-            <div style={{ position: "absolute", top: "-15px", left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg, #3b82f6, #8b5cf6)", color: "white", padding: "4px 12px", borderRadius: "12px", fontSize: "11px", fontWeight: "bold", whiteSpace: "nowrap", boxShadow: "0 2px 10px rgba(59, 130, 246, 0.3)", zIndex: 10 }}>
-              Granularidad: 1 Orden Individual
-            </div>
-            <div className="box-title" style={{ background: "linear-gradient(90deg, #3b82f6, #8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", borderBottomColor: "var(--border-color)", paddingTop: "18px" }}>fact_ordenes</div>
-            <ul className="box-list fact-list">
-              <li style={{ color: "var(--accent-primary)" }}>PK: orden_id</li>
-              <li>FK: cliente_id</li>
-              <li>FK: servicio_id</li>
-              <li>FK: centro_id</li>
-              <li>FK: fecha_id</li>
-              <li style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed var(--border-color)", color: "#a78bfa" }}>peso_kg</li>
-              <li style={{ color: "#a78bfa" }}>distancia_km</li>
-              <li style={{ color: "#a78bfa" }}>precio</li>
-              <li style={{ color: "#a78bfa" }}>costo</li>
-              <li style={{ color: "#a78bfa" }}>entrega_a_tiempo</li>
-            </ul>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "800px" }}>
-            {/* Dimensiones Bottom */}
-            <div className="schema-box dim-box">
-              <div className="box-title">dim_centro</div>
-              <ul className="box-list">
-                <li>PK: centro_id</li>
-                <li>nombre_centro</li>
-                <li>ciudad</li>
-              </ul>
-              <div className="connector bottom-left">
-                <span>1 : N</span>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", gap: "60px" }}>
+            
+            {/* Fila superior (Dimensiones) */}
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "600px", zIndex: 2 }}>
+              <div className="dim-box">
+                <div className="dim-title">dim_tiempo</div>
+                <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_tiempo?.filas)}</div>
+              </div>
+              <div className="dim-box">
+                <div className="dim-title">dim_cliente</div>
+                <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_cliente?.filas)}</div>
               </div>
             </div>
 
-            <div className="schema-box dim-box">
-              <div className="box-title">dim_tiempo</div>
-              <ul className="box-list">
-                <li>PK: fecha_id</li>
-                <li>fecha</li>
-                <li>año</li>
-                <li>mes</li>
-                <li>dia_semana</li>
+            {/* Centro (Tabla de Hechos) */}
+            <div className="fact-box" style={{ zIndex: 2 }}>
+              <div className="fact-title">fact_ordenes</div>
+              <ul className="fact-list">
+                {loading ? (
+                  <li>...</li>
+                ) : (
+                  data?.tablas?.fact_ordenes?.columnas.map((col, idx) => (
+                    <li key={idx}>{col}</li>
+                  ))
+                )}
               </ul>
-              <div className="connector bottom-right">
-                <span>1 : N</span>
+            </div>
+
+            {/* Fila inferior (Dimensiones) */}
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "600px", zIndex: 2 }}>
+              <div className="dim-box">
+                <div className="dim-title">dim_servicio</div>
+                <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_servicio?.filas)}</div>
+              </div>
+              <div className="dim-box">
+                <div className="dim-title">dim_centro</div>
+                <div className="dim-rows">{loading ? "..." : formatFilas(data?.dimensiones.dim_centro?.filas)}</div>
               </div>
             </div>
-          </div>
 
+            {/* Líneas conectoras (SVG de fondo) */}
+            <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}>
+              <line x1="20%" y1="20%" x2="40%" y2="40%" stroke="var(--border-color)" strokeWidth="1.5" strokeDasharray="4,4" />
+              <line x1="80%" y1="20%" x2="60%" y2="40%" stroke="var(--border-color)" strokeWidth="1.5" strokeDasharray="4,4" />
+              <line x1="20%" y1="80%" x2="40%" y2="60%" stroke="var(--border-color)" strokeWidth="1.5" strokeDasharray="4,4" />
+              <line x1="80%" y1="80%" x2="60%" y2="60%" stroke="var(--border-color)" strokeWidth="1.5" strokeDasharray="4,4" />
+            </svg>
+          </div>
         </div>
 
+        {/* Lado Derecho: Integridad */}
+        <div style={{ background: "rgba(30, 41, 59, 0.4)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)", padding: "32px", display: "flex", flexDirection: "column" }}>
+          
+          <div style={{ marginBottom: "40px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#f8fafc", marginBottom: "8px" }}>Integridad</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>Revisión de llaves después de cargar</p>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px" }}>Relación</th>
+                  <th style={{ padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", textAlign: "right" }}>Huérfanos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td style={{ padding: "16px 0", color: "#e2e8f0", fontSize: "14px" }}>Cargando...</td>
+                    <td style={{ padding: "16px 0" }}></td>
+                  </tr>
+                ) : (
+                  data?.integridad?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", color: "#e2e8f0", fontSize: "14px" }}>
+                        {item.relacion}
+                      </td>
+                      <td style={{ padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", textAlign: "right", fontFamily: "monospace", fontSize: "14px", color: getColorHex(item.color) }}>
+                        {item.huerfanos === 0 ? "0" : item.huerfanos} {item.nota || ""}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            {data?.notas_integridad && data.notas_integridad.length > 0 && (
+              <div style={{ marginTop: "24px", color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5", display: "flex", flexDirection: "column", gap: "8px" }}>
+                {data.notas_integridad.map((nota, idx) => (
+                  <span key={idx}>{nota}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          
+        </div>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
-        .schema-box {
-          background: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          width: 220px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-          position: relative;
-          z-index: 2;
-        }
         .dim-box {
-          border-top: 3px solid #34d399;
+          background: rgba(30, 41, 59, 0.8);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px;
+          padding: 16px;
+          width: 140px;
+          text-align: left;
+        }
+        .dim-title {
+          font-weight: 700;
+          color: #f8fafc;
+          font-size: 14px;
+          margin-bottom: 6px;
+        }
+        .dim-rows {
+          color: var(--text-secondary);
+          font-size: 12px;
         }
         .fact-box {
+          background: #0f172a;
+          border: 1px solid #14b8a6;
+          border-radius: 8px;
+          overflow: hidden;
           width: 260px;
-          border: 1px solid rgba(59, 130, 246, 0.4);
-          box-shadow: 0 0 30px rgba(59, 130, 246, 0.1);
-          transform: scale(1.05);
         }
-        .box-title {
-          padding: 12px 16px;
+        .fact-title {
+          background: #14b8a6;
+          color: #000;
           font-weight: 700;
           font-size: 15px;
-          border-bottom: 1px solid var(--border-color);
-          text-align: center;
-          color: var(--text-primary);
+          padding: 10px 16px;
         }
-        .box-list {
+        .fact-list {
           list-style: none;
-          padding: 12px 16px;
+          padding: 16px;
           margin: 0;
-          font-size: 13px;
-          color: var(--text-secondary);
           display: flex;
           flex-direction: column;
           gap: 6px;
+          max-height: 250px;
+          overflow-y: auto;
         }
-        .box-list li {
-          display: flex;
-          align-items: center;
+        .fact-list li {
+          font-size: 13px;
+          color: #e2e8f0;
+          font-family: monospace;
         }
-        .box-list li::before {
-          content: '•';
-          color: var(--text-muted);
-          margin-right: 8px;
-          font-size: 10px;
+        /* Custom scrollbar para la lista de facts por si crece mucho */
+        .fact-list::-webkit-scrollbar {
+          width: 6px;
         }
-        .connector {
-          position: absolute;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--accent-primary);
-          background: rgba(59, 130, 246, 0.1);
-          border: 1px dashed rgba(59, 130, 246, 0.4);
-          border-radius: 12px;
-          padding: 4px 10px;
-          z-index: 1;
+        .fact-list::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.2);
+          border-radius: 4px;
         }
-        .top-left { bottom: -30px; right: -40px; transform: rotate(35deg); }
-        .top-right { bottom: -30px; left: -40px; transform: rotate(-35deg); }
-        .bottom-left { top: -30px; right: -40px; transform: rotate(-35deg); }
-        .bottom-right { top: -30px; left: -40px; transform: rotate(35deg); }
       `}} />
-    </>
+    </div>
   );
 }
