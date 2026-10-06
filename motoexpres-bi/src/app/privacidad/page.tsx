@@ -8,6 +8,7 @@ interface ColumnaPrivacidad {
   accion: string;
 }
 
+
 interface PrivacidadData {
   columnas: ColumnaPrivacidad[];
   k_anonimato: {
@@ -81,14 +82,14 @@ export default function Privacidad() {
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px" }}>
-          
+
           {/* Fila 1: Tratamiento de PII */}
           <div style={{ background: "#ffffff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
             <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "#0f172a" }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               Tratamiento de PII en dim_cliente
             </h2>
-            
+
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
               {loading ? (
                 <div style={{ color: "#64748b", fontSize: "14px" }}>Cargando técnicas...</div>
@@ -157,7 +158,7 @@ export default function Privacidad() {
             <h2 style={{ fontSize: "16px", fontWeight: "600", color: "#0f172a", margin: 0 }}>Clasificación de columnas</h2>
             <span style={{ fontSize: "13px", color: "#64748b" }}>dim_cliente · qué se hizo con cada una</span>
           </div>
-          
+
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
               <thead>
