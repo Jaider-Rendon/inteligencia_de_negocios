@@ -134,25 +134,24 @@ export default function Tablero() {
 
   return (
     /* Contenedor que hace scroll dentro del main-content */
-    <div className="flex flex-col h-full overflow-y-auto bg-slate-50">
+    <>
 
       {/* ── HEADER ─────────────────────────────────── */}
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 pl-14 pr-10 py-4 flex items-center justify-between shadow-sm">
+      <header className="top-bar flex justify-between w-full">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 leading-tight">Tablero</h1>
+          <h1 className="page-title">Tablero</h1>
           <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Hito 2 – Lo funcional (E10)</p>
         </div>
         <GerentsSelector />
       </header>
 
-      {/* ── BANNER ─────────────────────────────────── */}
-      <div className="mx-14 mt-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex gap-3 text-sm text-yellow-800 mb-2">
-        <span className="font-bold text-yellow-700 whitespace-nowrap">Hito 2 · E7-E9</span>
-        <p className="leading-snug">Pirámide invertida: arriba KPIs (3 segundos), en el medio tendencias y abajo el detalle. Los valores salen de los datos limpios del proyecto.</p>
-      </div>
-
       {/* ── CUERPO ─────────────────────────────────── */}
-      <div className="flex-1 pl-14 pr-10 pb-8 pt-2 flex flex-col gap-6">
+      <div className="content-container flex flex-col gap-6">
+        {/* ── BANNER ─────────────────────────────────── */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex gap-3 text-sm text-yellow-800 mb-2">
+          <span className="font-bold text-yellow-700 whitespace-nowrap">Hito 2 · E7-E9</span>
+          <p className="leading-snug">Pirámide invertida: arriba KPIs (3 segundos), en el medio tendencias y abajo el detalle. Los valores salen de los datos limpios del proyecto.</p>
+        </div>
 
         {/* NIVEL 1 – 4 KPIs */}
         <div className="grid grid-cols-4 gap-6">
@@ -285,6 +284,6 @@ export default function Tablero() {
         </div>
 
       </div>
-    </div>
+    </>
   );
 }

@@ -32,59 +32,75 @@ export default function Accesos() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-slate-50">
-
+    <>
       {/* ── HEADER ──────────────────────────────────────── */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 pl-14 pr-10 py-5 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight">Control de Accesos</h1>
-        <p className="text-sm text-slate-500 font-medium mt-1">
-          MotoExpres BI · Seguridad y Row-Level Security
-        </p>
+      <header className="top-bar">
+        <div>
+          <h1 className="page-title">Control de Accesos</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", marginTop: "4px" }}>
+            Seguridad y auditoría basada en Row-Level Security
+          </p>
+        </div>
       </header>
 
-      <div className="pl-14 pr-10 pb-12 pt-8 flex flex-col gap-6">
+      <div className="content-container">
 
         {/* ── BANNER DE NOTA ────────────────────────────── */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-sm text-yellow-800 flex items-start gap-4 shadow-sm">
-          <span className="font-bold whitespace-nowrap bg-yellow-200 px-3 py-1 rounded-md text-yellow-900">Hito 2 · E10</span>
-          <p className="leading-relaxed text-yellow-900 mt-0.5">
-            <strong>Demostración del esquema de seguridad:</strong> Todo el equipo ingresa por la misma URL y ve la misma estructura, 
+        <div style={{
+          background: "rgba(245, 158, 11, 0.05)",
+          border: "1px solid rgba(245, 158, 11, 0.2)",
+          borderRadius: "16px",
+          padding: "20px 24px",
+          display: "flex",
+          gap: "16px",
+          marginBottom: "32px",
+          alignItems: "flex-start"
+        }}>
+          <span className="badge yellow">Hito 2 · E10</span>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
+            <strong style={{ color: "var(--text-primary)" }}>Demostración del esquema de seguridad:</strong> Todo el equipo ingresa por la misma URL y ve la misma estructura, 
             pero el sistema filtra los datos desde el backend asegurando que cada gerente solo vea la información de su región.
           </p>
         </div>
 
         {/* ── TARJETA 1: ROLES DEL SISTEMA ──────────────── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Roles del sistema configurados
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="data-table-container">
+          <div className="data-table-header">
+            <h2 className="data-table-title">
+              <span style={{ color: 'var(--accent-primary)' }}>🛡️</span>
+              Roles del sistema configurados
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "4px" }}>
+              Permisos y reglas de filtrado SQL
+            </p>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
               <thead>
                 <tr>
-                  <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-left pb-3 border-b border-gray-200">Rol</th>
-                  <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-left pb-3 border-b border-gray-200">Pantallas</th>
-                  <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-left pb-3 border-b border-gray-200">Datos permitidos</th>
-                  <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-left pb-3 border-b border-gray-200">Regla de filtro SQL</th>
+                  <th>Rol</th>
+                  <th>Pantallas</th>
+                  <th>Datos permitidos</th>
+                  <th>Regla de filtro SQL</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100 font-medium">Gerencia General</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">Todas las vistas</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">Total Nacional (100%)</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">
-                    <span className="font-mono text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                  <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>Gerencia General</td>
+                  <td>Todas las vistas</td>
+                  <td>Total Nacional (100%)</td>
+                  <td>
+                    <span style={{ background: "var(--bg-hover)", padding: "4px 8px", borderRadius: "6px", fontFamily: "monospace", fontSize: "12px", border: "1px solid var(--border-color)" }}>
                       WHERE 1=1
                     </span>
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100 font-medium">Gerente Regional</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">Tablero y Explorar</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">Solo su propia región</td>
-                  <td className="py-3 text-sm text-gray-800 border-b border-gray-100">
-                    <span className="font-mono text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                  <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>Gerente Regional</td>
+                  <td>Tablero y Explorar</td>
+                  <td>Solo su propia región</td>
+                  <td>
+                    <span style={{ background: "var(--bg-hover)", padding: "4px 8px", borderRadius: "6px", fontFamily: "monospace", fontSize: "12px", border: "1px solid var(--border-color)" }}>
                       WHERE c.region = '{"{nombre_region}"}'
                     </span>
                   </td>
@@ -96,68 +112,109 @@ export default function Accesos() {
 
         {/* ── LOADING & ERROR ───────────────────────────── */}
         {loading && (
-          <div className="flex items-center justify-center py-10">
-            <div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-teal-600 rounded-full" />
+          <div className="empty-state">
+            <div className="empty-state-icon">⏳</div>
+            <h2 className="empty-state-title">Cargando datos...</h2>
+            <p className="empty-state-desc">Verificando los permisos de acceso y logs</p>
           </div>
         )}
+
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 text-sm font-medium">
-            ⚠️ No se pudieron cargar los datos: {error}
+          <div className="empty-state">
+            <div className="empty-state-icon" style={{ color: "#ef4444" }}>⚠️</div>
+            <h2 className="empty-state-title">Error de carga</h2>
+            <p className="empty-state-desc">{error}</p>
           </div>
         )}
 
         {/* ── GRID INFERIOR (2 COLUMNAS) ────────────────── */}
         {!loading && !error && data && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="chart-grid">
 
             {/* COLUMNA IZQUIERDA: Prueba Rápida */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Prueba matemática (Validación)
-              </h2>
-
-              <div className="overflow-x-auto mb-4">
-                <table className="w-full text-left border-collapse">
+            <div className="data-table-container" style={{ marginBottom: 0, display: "flex", flexDirection: "column" }}>
+              <div className="data-table-header">
+                <h2 className="data-table-title">
+                  <span style={{ color: 'var(--accent-primary)' }}>🔢</span>
+                  Prueba matemática
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "4px" }}>
+                  Validación de ingresos asignados
+                </p>
+              </div>
+              
+              <div style={{ overflowX: "auto", flex: 1 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-left pb-3 border-b border-gray-200">Vista del gerente</th>
-                      <th className="text-xs font-bold text-gray-500 uppercase tracking-wider text-right pb-3 border-b border-gray-200">Ingresos asignados</th>
+                      <th>Vista del gerente</th>
+                      <th style={{ textAlign: "right" }}>Ingresos asignados</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.regiones.map(row => (
                       <tr key={row.region}>
-                        <td className="py-3 text-sm text-gray-800 border-b border-gray-100">{row.region}</td>
-                        <td className="py-3 text-sm text-gray-800 border-b border-gray-100 text-right font-mono">{fmtCOP(row.ingresos)}</td>
+                        <td style={{ fontWeight: 500 }}>{row.region}</td>
+                        <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "14px", color: "var(--text-primary)" }}>
+                          {fmtCOP(row.ingresos)}
+                        </td>
                       </tr>
                     ))}
-                    <tr className="bg-gray-50">
-                      <td className="py-3 px-2 text-sm text-gray-900 font-bold border-b border-gray-100">Suma de las 5 regiones (Total)</td>
-                      <td className="py-3 px-2 text-sm text-gray-900 font-bold border-b border-gray-100 text-right font-mono">{fmtCOP(data.total_gerencia)}</td>
-                    </tr>
                   </tbody>
+                  <tfoot>
+                    <tr style={{ background: "var(--bg-hover)" }}>
+                      <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)", borderTop: "2px solid var(--border-color)" }}>
+                        Suma de las 5 regiones (Total)
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "monospace", fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", borderTop: "2px solid var(--border-color)" }}>
+                        {fmtCOP(data.total_gerencia)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
-              <p className="text-xs text-gray-500 mt-auto">
+              <div style={{ padding: "16px 24px", background: "var(--bg-main)", borderTop: "1px solid var(--border-color)", fontSize: "12px", color: "var(--text-muted)" }}>
                 Las cinco regiones suman el total de la gerencia general, demostrando que el filtro RLS funciona sin fugas ni duplicados.
-              </p>
+              </div>
             </div>
 
-            {/* COLUMNA DERECHA: Registro de Accesos (Estilo Claro) */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Registro de accesos (Log)
-              </h2>
+            {/* COLUMNA DERECHA: Registro de Accesos (Estilo Terminal Claro) */}
+            <div className="data-table-container" style={{ marginBottom: 0, display: "flex", flexDirection: "column" }}>
+              <div className="data-table-header">
+                <h2 className="data-table-title">
+                  <span style={{ color: 'var(--accent-primary)' }}>📜</span>
+                  Registro de accesos (Log)
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "4px" }}>
+                  Trazabilidad de auditoría
+                </p>
+              </div>
               
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm text-gray-700 whitespace-pre-wrap flex-1 flex flex-col gap-2 overflow-y-auto">
+              <div style={{ 
+                background: "var(--bg-hover)", 
+                margin: "24px",
+                padding: "20px",
+                borderRadius: "12px",
+                border: "1px solid var(--border-color)",
+                fontFamily: "monospace", 
+                fontSize: "13px", 
+                color: "var(--text-secondary)",
+                flex: 1, 
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "8px", 
+                overflowY: "auto",
+                maxHeight: "300px"
+              }}>
                 {data.registros_log.map((log, i) => (
-                  <div key={i} className="flex gap-3 items-start">
-                    <span className="text-gray-400 select-none">&gt;</span>
-                    <span>{log}</span>
+                  <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                    <span style={{ color: "var(--text-muted)", userSelect: "none" }}>&gt;</span>
+                    <span style={{ lineHeight: 1.5 }}>{log}</span>
                   </div>
                 ))}
-                <div className="mt-2 text-gray-400 animate-pulse">
-                  _ esperando conexiones...
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", opacity: 0.5, marginTop: "8px" }}>
+                  <span style={{ color: "var(--text-muted)", userSelect: "none" }}>&gt;</span>
+                  <span style={{ animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>_ esperando conexiones...</span>
                 </div>
               </div>
             </div>
@@ -166,6 +223,6 @@ export default function Accesos() {
         )}
 
       </div>
-    </div>
+    </>
   );
 }
