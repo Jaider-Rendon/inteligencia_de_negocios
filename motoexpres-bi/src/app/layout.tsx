@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "Panel de Inteligencia de Negocios para MotoExpres",
 };
 
+import { RoleProvider } from "@/context/RoleContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,12 +20,14 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.variable}>
-        <div className="app-container">
-          <Sidebar />
-          <main className="main-content">
-            {children}
-          </main>
-        </div>
+        <RoleProvider>
+          <div className="app-container">
+            <Sidebar />
+            <main className="main-content">
+              {children}
+            </main>
+          </div>
+        </RoleProvider>
       </body>
     </html>
   );

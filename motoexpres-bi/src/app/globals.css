@@ -133,6 +133,22 @@ body {
   transform: scaleY(1);
 }
 
+.nav-link.hito2-active {
+  background-color: #14b8a6 !important;
+  color: #ffffff !important;
+  border-radius: 8px;
+}
+
+.nav-link.hito2-active::before {
+  display: none;
+}
+
+.nav-link.hito2-active .nav-icon {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
 .nav-icon {
   margin-right: 12px;
   display: flex;

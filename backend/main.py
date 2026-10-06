@@ -21,6 +21,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from rutas.metricas import router as metricas_router
+from rutas.tablero import router as tablero_router
+from rutas.explorar import router as explorar_router
+from rutas.alertas import router as alertas_router
+
+app.include_router(metricas_router)
+app.include_router(tablero_router)
+app.include_router(explorar_router)
+app.include_router(alertas_router)
+
 DB_PATH = "motoexpres_bi.db"
 DATOS_DIR = os.path.join(os.path.dirname(__file__), "..", "datos")
 
