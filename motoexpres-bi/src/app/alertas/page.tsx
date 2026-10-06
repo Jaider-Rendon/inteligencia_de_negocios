@@ -21,13 +21,9 @@ interface Alerta {
   titulo: string;
   subtitulo: string;
   detalle: string;
-  // campos opcionales según tipo
   zscore?: number;
   tasa_actual?: number;
   meta?: number;
-  brecha_puntos?: number;
-  promedio_diciembre?: number;
-  promedio_general?: number;
 }
 
 interface Resumen {
@@ -47,31 +43,43 @@ interface AlertasData {
 /* ── Helpers ────────────────────────────────────────────── */
 const fmtNum = (v: number) => new Intl.NumberFormat("es-CO").format(Math.round(v));
 
-const colorAlerta = {
-  anomalia:   { border: "border-l-red-500",    badge: "bg-red-50 text-red-600",    icono: "🔴" },
-  estacional: { border: "border-l-teal-500",   badge: "bg-teal-50 text-teal-700",  icono: "📅" },
-  umbral:     { border: "border-l-yellow-500", badge: "bg-yellow-50 text-yellow-700", icono: "⚠️" },
+const alertaConfig = {
+  anomalia:   { color: "#ef4444", bg: "rgba(239, 68, 68, 0.1)", icon: "🚨", badge: "red" },
+  estacional: { color: "#3b82f6", bg: "rgba(59, 130, 246, 0.1)", icon: "📈", badge: "blue" },
+  umbral:     { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: "⚠️", badge: "yellow" },
 };
 
 const etiquetaAlerta = (a: Alerta) => {
   if (a.tipo === "anomalia" && a.zscore !== undefined)
-    return `z = ${a.zscore > 0 ? "+" : ""}${a.zscore}`;
-  if (a.tipo === "estacional") return "estacional";
+    return `Z-Score = ${a.zscore > 0 ? "+" : ""}${a.zscore}`;
+  if (a.tipo === "estacional") return "Estacional";
   if (a.tipo === "umbral" && a.tasa_actual !== undefined)
     return `${a.tasa_actual}% / 85%`;
   return a.tipo;
 };
 
-/* ── Tooltip personalizado del gráfico ─────────────────── */
+/* ── Tooltip ────────────────────────────────────────────── */
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload as GraficoMes;
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-md px-4 py-3 text-sm">
-      <p className="font-bold text-gray-800 mb-1">{label}</p>
-      <p className="text-gray-600">Órdenes: <span className="font-semibold text-gray-900">{fmtNum(d.ordenes)}</span></p>
-      <p className="text-gray-500">Z-score: <span className={`font-mono font-bold ${Math.abs(d.zscore) > 2 ? "text-red-500" : "text-slate-500"}`}>{d.zscore > 0 ? "+" : ""}{d.zscore}</span></p>
-      {d.es_anomalia && <p className="text-red-500 font-semibold mt-1">⚠ Anomalía detectada</p>}
+    <div style={{
+      background: "var(--bg-card)",
+      border: "1px solid var(--border-color)",
+      borderRadius: "12px",
+      padding: "12px 16px",
+      fontSize: "13px",
+      boxShadow: "0 10px 15px -3px rgba(0,0,0,.1)",
+      color: "var(--text-primary)"
+    }}>
+      <p style={{ fontWeight: 700, marginBottom: "4px" }}>{label}</p>
+      <p style={{ color: "var(--text-secondary)" }}>Órdenes: <strong style={{ color: "var(--text-primary)" }}>{fmtNum(d.ordenes)}</strong></p>
+      <p style={{ color: "var(--text-secondary)" }}>Z-score: 
+        <strong style={{ marginLeft: "4px", color: Math.abs(d.zscore) > 2 ? "#ef4444" : "var(--text-primary)" }}>
+          {d.zscore > 0 ? "+" : ""}{d.zscore}
+        </strong>
+      </p>
+      {d.es_anomalia && <p style={{ color: "#ef4444", fontWeight: 600, marginTop: "6px" }}>⚠ Anomalía detectada</p>}
     </div>
   );
 };
@@ -91,123 +99,99 @@ export default function Alertas() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-slate-50">
-
+    <>
       {/* ── HEADER ──────────────────────────────────── */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 pl-14 pr-10 py-4 shadow-sm">
-        <h1 className="text-xl font-extrabold text-slate-900 leading-tight">Alertas</h1>
-        <p className="text-xs text-slate-400 font-medium mt-0.5">
-          MotoExpres BI · Detección automática de anomalías (Hito 2 – E11)
-        </p>
-      </header>
-
-      <div className="pl-14 pr-10 pb-10 pt-6 flex flex-col gap-6">
-
-        {/* ── BANNER METODOLÓGICO ──────────────────── */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-4 flex gap-3 text-sm text-yellow-800">
-          <span className="font-bold whitespace-nowrap">Hito 2 · E11</span>
-          <p className="leading-snug">
-            El sistema avisa solo cuando un mes se sale de lo normal (|z|&nbsp;&gt;&nbsp;2). 
-            El Z-score mide cuántas desviaciones estándar se aleja el volumen mensual de la media histórica. 
-            Un diciembre alto es esperable; un agosto masivo merece revisión.
+      <header className="top-bar">
+        <div>
+          <h1 className="page-title">Alertas</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", marginTop: "4px" }}>
+            Detección automática de anomalías y alertas preventivas
           </p>
         </div>
+      </header>
 
-        {/* ── LOADING ─────────────────────────────── */}
+      <div className="content-container">
+        
+        {/* ── LOADING & ERROR ─────────────────────────── */}
         {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin h-10 w-10 border-4 border-yellow-200 border-t-yellow-500 rounded-full" />
+          <div className="empty-state">
+            <div className="empty-state-icon">⏳</div>
+            <h2 className="empty-state-title">Cargando datos...</h2>
+            <p className="empty-state-desc">Analizando las series temporales de órdenes</p>
           </div>
         )}
 
-        {/* ── ERROR ───────────────────────────────── */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-700 text-sm font-medium">
-            ⚠️ No se pudieron cargar los datos: {error}
+          <div className="empty-state">
+            <div className="empty-state-icon" style={{ color: "#ef4444" }}>⚠️</div>
+            <h2 className="empty-state-title">Error de carga</h2>
+            <p className="empty-state-desc">{error}</p>
           </div>
         )}
 
         {!loading && !error && data && (
           <>
-            {/* ── RESUMEN ESTADÍSTICO ─────────────── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Meses Analizados",    value: data.resumen.meses_analizados,                           sub: "serie completa 2022-2025" },
-                { label: "Media Mensual",        value: fmtNum(data.resumen.media_mensual),                      sub: "órdenes / mes (μ)" },
-                { label: "Desv. Estándar (σ)",  value: fmtNum(data.resumen.std_mensual),                        sub: "dispersión histórica" },
-                { label: "Meses Anómalos",       value: data.resumen.meses_anomalos,                             sub: "|z| > 2 detectados" },
-              ].map(({ label, value, sub }) => (
-                <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</p>
-                  <p className="text-3xl font-bold text-gray-900">{value}</p>
-                  <p className="text-xs text-gray-400 mt-1">{sub}</p>
-                </div>
-              ))}
+            {/* ── 1. KPIs ─────────────────────────────────── */}
+            <div className="kpi-grid">
+              <div className="kpi-card">
+                <p className="kpi-title">Meses Analizados</p>
+                <p className="kpi-value">{data.resumen.meses_analizados}</p>
+                <p className="kpi-sub">Serie completa 2022-2025</p>
+              </div>
+              <div className="kpi-card">
+                <p className="kpi-title">Media Mensual</p>
+                <p className="kpi-value">{fmtNum(data.resumen.media_mensual)}</p>
+                <p className="kpi-sub">Órdenes promedio (μ)</p>
+              </div>
+              <div className="kpi-card">
+                <p className="kpi-title">Desviación (σ)</p>
+                <p className="kpi-value">{fmtNum(data.resumen.std_mensual)}</p>
+                <p className="kpi-sub">Dispersión histórica</p>
+              </div>
+              <div className="kpi-card">
+                <p className="kpi-title">Meses Anómalos</p>
+                <p className="kpi-value">{data.resumen.meses_anomalos}</p>
+                <p className="kpi-sub">|z| &gt; 2 detectados</p>
+              </div>
             </div>
 
-            {/* ── GRÁFICO DE SERIE TEMPORAL ────────── */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Serie temporal de órdenes</p>
-                  <p className="text-sm font-semibold text-gray-800">Volumen mensual 2022-2025 · Barras rojas = anomalías (|z|&nbsp;&gt;&nbsp;2)</p>
-                </div>
-                <div className="flex gap-4 text-xs text-gray-500 items-center">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#94a3b8" }} />
-                    Normal
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-red-400" />
-                    Anomalía
-                  </span>
-                </div>
+            {/* ── 2. GRÁFICO TEMPORAL ─────────────────────── */}
+            <div className="data-table-container" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="data-table-header">
+                <h2 className="data-table-title">
+                  <span style={{ color: 'var(--accent-primary)' }}>📈</span>
+                  Serie temporal de órdenes
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "4px" }}>
+                  Evolución histórica y detección de anomalías (|Z| &gt; 2)
+                </p>
               </div>
-
-              <div className="h-64">
+              
+              <div style={{ padding: "32px 24px", height: "400px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data.grafico}
-                    margin={{ top: 5, right: 10, left: -10, bottom: 30 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="mes"
-                      tick={{ fontSize: 9, fill: "#94a3b8" }}
-                      axisLine={false}
-                      tickLine={false}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={2}
-                      dy={8}
+                  <BarChart data={data.grafico} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                    <XAxis 
+                      dataKey="mes" 
+                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                      axisLine={false} tickLine={false}
+                      angle={-45} textAnchor="end" dy={10} interval={1}
                     />
-                    <YAxis
-                      tick={{ fontSize: 10, fill: "#94a3b8" }}
-                      axisLine={false}
-                      tickLine={false}
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                      axisLine={false} tickLine={false}
                       tickFormatter={v => fmtNum(v)}
                     />
-                    <Tooltip content={<CustomTooltip />} />
-                    {/* Línea de referencia: media */}
-                    <ReferenceLine
-                      y={data.resumen.media_mensual}
-                      stroke="#6366f1"
-                      strokeDasharray="4 3"
-                      strokeWidth={1.5}
-                      label={{
-                        value: `μ = ${fmtNum(data.resumen.media_mensual)}`,
-                        position: "insideTopRight",
-                        fill: "#6366f1",
-                        fontSize: 11,
-                      }}
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--bg-hover)" }} />
+                    <ReferenceLine 
+                      y={data.resumen.media_mensual} 
+                      stroke="var(--accent-primary)" 
+                      strokeDasharray="4 4"
+                      label={{ value: `Media = ${fmtNum(data.resumen.media_mensual)}`, position: "insideTopRight", fill: "var(--accent-primary)", fontSize: 12, fontWeight: 600 }}
                     />
-                    <Bar dataKey="ordenes" radius={[3, 3, 0, 0]} barSize={12}>
+                    <Bar dataKey="ordenes" radius={[4, 4, 0, 0]} barSize={16}>
                       {data.grafico.map((entry, i) => (
-                        <Cell
-                          key={i}
-                          fill={entry.es_anomalia ? "#ef4444" : "#94a3b8"}
-                          opacity={entry.es_anomalia ? 1 : 0.75}
-                        />
+                        <Cell key={i} fill={entry.es_anomalia ? "#ef4444" : "var(--text-muted)"} opacity={entry.es_anomalia ? 1 : 0.4} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -215,68 +199,64 @@ export default function Alertas() {
               </div>
             </div>
 
-            {/* ── TARJETAS DE ALERTAS ──────────────── */}
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
-                Alertas activas ({data.alertas.length})
+            {/* ── 3. TARJETAS DE ALERTA ───────────────────── */}
+            <div style={{ marginTop: "40px", marginBottom: "24px" }}>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
+                Alertas Activas ({data.alertas.length})
+              </h2>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "24px" }}>
+                Notificaciones basadas en análisis estadístico y objetivos de negocio.
               </p>
-
-              <div className="flex flex-col gap-4">
+              
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "24px" }}>
                 {data.alertas.map((alerta, i) => {
-                  const cfg = colorAlerta[alerta.tipo] ?? colorAlerta.umbral;
+                  const conf = alertaConfig[alerta.tipo] || alertaConfig.umbral;
+                  
                   return (
-                    <div
-                      key={i}
-                      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-5 flex justify-between items-start gap-4`}
-                    >
-                      {/* Contenido izquierdo */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-base leading-none">{cfg.icono}</span>
-                          <h3 className="text-sm font-bold text-gray-900">{alerta.titulo}</h3>
+                    <div key={i} className="kpi-card" style={{ borderTop: `4px solid ${conf.color}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                        <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: conf.bg, color: conf.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+                          {conf.icon}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{alerta.subtitulo}</p>
-                        <p className="text-xs text-gray-400 leading-relaxed">{alerta.detalle}</p>
+                        <span className={`badge ${conf.badge}`}>{etiquetaAlerta(alerta)}</span>
+                      </div>
+                      
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                        {alerta.titulo}
+                      </h3>
+                      <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "12px" }}>
+                        {alerta.subtitulo}
+                      </p>
+                      <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, marginTop: "auto" }}>
+                        {alerta.detalle}
+                      </p>
 
-                        {/* Barra de progreso para tipo umbral */}
-                        {alerta.tipo === "umbral" && alerta.tasa_actual !== undefined && (
-                          <div className="mt-3">
-                            <div className="flex justify-between text-xs text-gray-400 mb-1">
-                              <span>Tasa actual: <strong className="text-gray-700">{alerta.tasa_actual}%</strong></span>
-                              <span>Meta: <strong className="text-gray-700">85%</strong></span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div
-                                className="h-2 rounded-full bg-yellow-400 transition-all"
-                                style={{ width: `${Math.min(alerta.tasa_actual, 100)}%` }}
-                              />
-                            </div>
+                      {alerta.tipo === "umbral" && alerta.tasa_actual !== undefined && (
+                        <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--border-color)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>
+                            <span style={{ color: "var(--text-secondary)" }}>Tasa actual: <strong style={{ color: "var(--text-primary)" }}>{alerta.tasa_actual}%</strong></span>
+                            <span style={{ color: "var(--text-secondary)" }}>Meta: <strong style={{ color: "var(--text-primary)" }}>85%</strong></span>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Etiqueta derecha */}
-                      <div className="shrink-0">
-                        <span className={`font-mono text-xs px-2.5 py-1.5 rounded-lg font-bold ${cfg.badge}`}>
-                          {etiquetaAlerta(alerta)}
-                        </span>
-                      </div>
+                          <div style={{ height: "8px", background: "var(--bg-hover)", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", background: conf.color, width: `${Math.min(alerta.tasa_actual, 100)}%`, borderRadius: "999px" }}></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* ── NOTA METODOLÓGICA ────────────────── */}
-            <div className="bg-slate-100 rounded-xl px-5 py-4 text-xs text-slate-500 leading-relaxed">
-              <strong className="text-slate-700">Metodología:</strong>{" "}
-              Z-score = (X_mes − μ) / σ, calculado sobre la serie mensual completa con desviación estándar muestral (ddof=1).
-              Un valor |z|&nbsp;&gt;&nbsp;2 indica que el mes está a más de 2 desviaciones estándar de la media,
-              probabilidad de ocurrencia normal inferior al 5% bajo distribución normal.
+            {/* ── NOTA METODOLÓGICA ───────────────────────── */}
+            <div style={{ background: "var(--bg-hover)", padding: "16px 24px", borderRadius: "12px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              <strong style={{ color: "var(--text-primary)" }}>Metodología:</strong> Z-score = (X_mes − μ) / σ. 
+              Calculado sobre la serie mensual completa. Un valor |z| &gt; 2 indica que el mes está a más de 2 desviaciones estándar de la media.
             </div>
+
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }
