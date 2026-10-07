@@ -81,7 +81,7 @@ export default function Sidebar() {
         </ul>
       </div>
 
-      <div className="sidebar-section" style={{ marginTop: '2rem' }}>
+      <div className="sidebar-section" style={{ marginTop: '0.5rem' }}>
         <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>HITO 2 · LO FUNCIONAL</span>
           <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 'bold' }}>E10</span>
@@ -151,7 +151,7 @@ export default function Sidebar() {
         </ul>
       </div>
 
-      <div className="sidebar-section" style={{ marginTop: '2rem' }}>
+      <div className="sidebar-section" style={{ marginTop: '0.5rem' }}>
         <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>HITO 3 · EL PRODUCTO</span>
           <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 'bold' }}>E16</span>
