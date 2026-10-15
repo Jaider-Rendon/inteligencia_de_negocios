@@ -7,6 +7,9 @@ export default function CargaDeDatos() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [activeFile, setActiveFile] = useState<string>("");
+  const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -14,10 +17,14 @@ export default function CargaDeDatos() {
         const response = await fetch("http://localhost:8000/api/etl/status");
         if (response.ok) {
           const data = await response.json();
+          if (data.archivo_origen) {
+            setActiveFile(data.archivo_origen);
+          }
           if (data.loaded) {
             setResult({
               status: "success",
               message: data.message,
+              archivo_origen: data.archivo_origen,
               registros_procesados: data.count,
               pipeline: data.pipeline,
               manejo_huerfanas: data.manejo_huerfanas,
@@ -33,8 +40,49 @@ export default function CargaDeDatos() {
       }
     };
 
+    const fetchDatasetInfo = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/etl/dataset-info");
+        if (res.ok) {
+          const info = await res.json();
+          if (info.activo) setActiveFile(info.activo);
+          if (info.disponibles) setAvailableFiles(info.disponibles);
+        }
+      } catch (e) {
+        console.error("Error fetching dataset info:", e);
+      }
+    };
+
     checkStatus();
+    fetchDatasetInfo();
   }, []);
+
+  const handleSwitchDataset = async (newFilename: string) => {
+    if (newFilename === activeFile || switching || loading) return;
+    setSwitching(true);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`http://localhost:8000/api/etl/switch-dataset?filename=${encodeURIComponent(newFilename)}`, {
+        method: "POST"
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Error al alternar dataset");
+      }
+      const data = await res.json();
+      setActiveFile(data.activo);
+      if (data.etl) {
+        setResult(data.etl);
+        if (data.etl.historial) setHistory(data.etl.historial);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSwitching(false);
+      setLoading(false);
+    }
+  };
 
   const handleReset = async () => {
     setLoading(true);
@@ -113,6 +161,52 @@ export default function CargaDeDatos() {
               <p style={{ color: "#475569", fontSize: "14px", lineHeight: "1.6" }}>
                 Inicia la extracción de datos desde los archivos fuente, ejecutando de forma automática 14 reglas de calidad, transformaciones de negocio y carga final en SQLite. Este proceso es 100% <strong>idempotente</strong>.
               </p>
+              <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Archivo fuente activo:</span>
+                {availableFiles.length > 0 ? (
+                  <select
+                    value={activeFile || result?.archivo_origen || ""}
+                    onChange={(e) => handleSwitchDataset(e.target.value)}
+                    disabled={loading || switching}
+                    style={{
+                      background: "#eff6ff",
+                      color: "#1d4ed8",
+                      border: "1px solid #bfdbfe",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontFamily: "monospace",
+                      fontWeight: 600,
+                      cursor: loading || switching ? "not-allowed" : "pointer",
+                      outline: "none"
+                    }}
+                  >
+                    {availableFiles.map((file) => (
+                      <option key={file} value={file}>
+                        {file}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span style={{ 
+                    background: "#eff6ff", 
+                    color: "#1d4ed8", 
+                    border: "1px solid #bfdbfe", 
+                    padding: "3px 10px", 
+                    borderRadius: "6px", 
+                    fontSize: "12px", 
+                    fontFamily: "monospace", 
+                    fontWeight: 600 
+                  }}>
+                    {result?.archivo_origen || activeFile || "Detectando archivo..."}
+                  </span>
+                )}
+                {switching && (
+                  <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 500 }}>
+                    ⏳ Sincronizando dataset...
+                  </span>
+                )}
+              </div>
             </div>
             
             <div style={{ display: "flex", gap: "16px" }}>

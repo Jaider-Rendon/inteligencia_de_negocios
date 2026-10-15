@@ -26,17 +26,29 @@ export default function Privacidad() {
     fetch("http://localhost:8000/api/etl/privacidad")
       .then(res => res.json())
       .then((resData) => {
-        if (resData.columnas) {
+        if (resData && resData.columnas) {
           setData(resData);
         } else {
+          // Fallback con datos por defecto si la respuesta no tiene el formato esperado
           setData({
-            columnas: resData,
+            columnas: [
+              { nombre: "nombre_cliente", tipo: "Identificador directo", accion: "Retirar (Drop Column)" },
+              { nombre: "nit",            tipo: "Identificador directo", accion: "Seudonimizar (Salted Hash)" },
+              { nombre: "contacto",       tipo: "Identificador directo", accion: "Retirar (Drop Column)" },
+              { nombre: "email",          tipo: "Identificador directo", accion: "Retirar (Drop Column)" },
+              { nombre: "telefono",       tipo: "Identificador directo", accion: "Retirar (Drop Column)" },
+              { nombre: "region",         tipo: "Cuasi-identificador",   accion: "Conservar" },
+              { nombre: "ciudad",         tipo: "Cuasi-identificador",   accion: "Retirar (queda región)" },
+              { nombre: "sector",         tipo: "Cuasi-identificador",   accion: "Retirar del análisis por cliente" },
+              { nombre: "segmento",       tipo: "Cuasi-identificador",   accion: "Conservar" },
+              { nombre: "fecha_alta",     tipo: "Cuasi-identificador",   accion: "Generalizar a año" },
+            ],
             k_anonimato: { antes: { k: 1, unicos: 42, cruce: "región + ciudad + sector + segmento" }, despues: { k: 5, unicos: 0, cruce: "región + segmento" } },
             tecnicas: [
-              { nombre: "Nombres y Apellidos", badge: "purple", texto: "Reemplazado por UUIDs", original: "nombre_cliente" },
-              { nombre: "Teléfono / Celular", badge: "red", texto: "Omitido (Drop Column)", original: "telefono" },
-              { nombre: "Dirección Exacta", badge: "yellow", texto: "Generalizado a Nivel Sector", original: "direccion" },
-              { nombre: "Identificador Interno (ID Cliente)", badge: "blue", texto: "Tokenizado (Salted Hash)", original: "nit" }
+              { nombre: "Nombres y Apellidos",      badge: "purple", texto: "Reemplazado por UUIDs",       original: "nombre_cliente" },
+              { nombre: "Teléfono / Celular",       badge: "red",    texto: "Omitido (Drop Column)",       original: "telefono" },
+              { nombre: "Dirección Exacta",         badge: "yellow", texto: "Generalizado a Nivel Región", original: "ciudad" },
+              { nombre: "Identificador (NIT)",      badge: "blue",   texto: "Tokenizado (Salted Hash)",    original: "nit" },
             ]
           });
         }

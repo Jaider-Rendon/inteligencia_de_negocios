@@ -35,16 +35,21 @@ def normalizar_region(region: str) -> str:
     return REGIONES_VALIDAS.get(capitalized, capitalized)
 
 
+from rutas.tablero import registrar_acceso
+
 @router.get("/explorar")
 def obtener_datos_explorar(
-    region: Optional[str] = Query("Valle", description="Nombre de la región a explorar")
+    region: Optional[str] = Query("Valle", description="Nombre de la región a explorar"),
+    rol: Optional[str] = Query("gerencia_general", description="Rol del usuario que realiza la búsqueda")
 ):
     """
     Endpoint de exploración regional.
     Calcula KPIs, distribución por servicio y tabla de participación
     (región vs. promedio global) — todo dinámico desde SQLite.
+    Registra la búsqueda realizada en el log de auditoría.
     """
     region_nombre = normalizar_region(region)
+    registrar_acceso(rol, "Explorar", f"Búsqueda y análisis de la región: {region_nombre}")
 
     try:
         with get_conn() as conn:

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -16,74 +16,74 @@ import {
   Cell
 } from 'recharts';
 
-// Definición de las escenas con sus datos mock
-const ESCENAS = [
+// Datos de MotoExpres calculados a partir de los hechos limpios
+const ESCENAS_BASE = [
   {
     id: 1,
     antetitulo: "Escena 1: Contexto",
-    titulo: "El crecimiento de MotoExpres",
-    descripcion: "Durante los últimos años, MotoExpres ha experimentado un crecimiento constante en el volumen de entregas. Nuestra red se ha expandido para cubrir más zonas, aumentando nuestra presencia en el mercado local.",
+    titulo: "El volumen operativo de MotoExpres",
+    descripcion: "Entre 2022 y 2025, MotoExpres procesó más de 182.000 órdenes válidas generando más de $8.185 millones de pesos en ingresos. El negocio alcanzó su punto de mayor actividad en 2024 con 47.818 envíos.",
     tipoGrafico: "bar",
     datos: [
-      { name: '2021', valor: 4000 },
-      { name: '2022', valor: 5500 },
-      { name: '2023', valor: 7200 },
-      { name: '2024', valor: 9500 },
+      { name: '2022', ordenes: 44543 },
+      { name: '2023', ordenes: 45081 },
+      { name: '2024', ordenes: 47818 },
+      { name: '2025', ordenes: 45048 },
     ]
   },
   {
     id: 2,
     antetitulo: "Escena 2: Problema",
-    titulo: "Aumento en los tiempos de entrega",
-    descripcion: "Sin embargo, con este crecimiento rápido, hemos detectado que los tiempos de entrega promedio han comenzado a incrementarse, afectando nuestra promesa de servicio rápido y eficiente.",
+    titulo: "La brecha en la promesa de servicio",
+    descripcion: "A pesar del sólido volumen comercial, la tasa de entregas a tiempo se ha mantenido estancada en torno al 50,0%, dejando una brecha crítica de 35 puntos porcentuales frente a la meta corporativa del 85%.",
     tipoGrafico: "line",
     datos: [
-      { name: 'Ene', tiempo: 15 },
-      { name: 'Feb', tiempo: 16 },
-      { name: 'Mar', tiempo: 18 },
-      { name: 'Abr', tiempo: 22 },
-      { name: 'May', tiempo: 25 },
-      { name: 'Jun', tiempo: 30 },
+      { name: '2022', cumplimiento: 50.1, meta: 85.0 },
+      { name: '2023', cumplimiento: 50.3, meta: 85.0 },
+      { name: '2024', cumplimiento: 49.8, meta: 85.0 },
+      { name: '2025', cumplimiento: 50.0, meta: 85.0 },
     ]
   },
   {
     id: 3,
     antetitulo: "Escena 3: Detalle",
-    titulo: "Desempeño por zonas",
-    descripcion: "Al analizar el detalle, observamos que el problema no es uniforme. La Zona Norte y la Zona Centro concentran la mayor parte de los retrasos debido a la congestión de tráfico y la alta demanda.",
+    titulo: "Concentración de demoras por región",
+    descripcion: "El análisis geográfico revela que el Eje Cafetero y Bogotá concentran más de 40.000 entregas retrasadas combinadas, representando los dos cuellos de botella prioritarios del país.",
     tipoGrafico: "pie",
     datos: [
-      { name: 'Norte', value: 45 },
-      { name: 'Centro', value: 35 },
-      { name: 'Sur', value: 10 },
-      { name: 'Este', value: 5 },
-      { name: 'Oeste', value: 5 },
+      { name: 'Eje Cafetero', value: 22166 },
+      { name: 'Bogotá', value: 18730 },
+      { name: 'Antioquia', value: 14602 },
+      { name: 'Magdalena Medio', value: 11969 },
+      { name: 'Valle', value: 10979 },
     ]
   },
   {
     id: 4,
     antetitulo: "Escena 4: Causa",
-    titulo: "Capacidad de flota superada",
-    descripcion: "La causa principal de estos retrasos en las zonas críticas es que nuestra flota actual de repartidores ha llegado a su límite de capacidad. El número de pedidos supera la cantidad de motos disponibles en horas pico.",
+    titulo: "Servicios con mayor impacto de demoras",
+    descripcion: "El servicio Estándar y Express representan el mayor volumen absoluto de demoras operativas. La capacidad de asignación de mensajeros en rutas troncales se satura en horas de alta demanda.",
     tipoGrafico: "bar",
     datos: [
-      { name: '08:00', pedidos: 50, capacidad: 60 },
-      { name: '12:00', pedidos: 120, capacidad: 80 }, // Supera capacidad
-      { name: '15:00', pedidos: 70, capacidad: 75 },
-      { name: '19:00', pedidos: 150, capacidad: 90 }, // Supera capacidad
+      { name: 'Estándar', a_tiempo: 32805, retrasadas: 33143 },
+      { name: 'Express', a_tiempo: 18746, retrasadas: 18748 },
+      { name: 'Same Day', a_tiempo: 10295, retrasadas: 10014 },
+      { name: 'Carga', a_tiempo: 7992, retrasadas: 7731 },
+      { name: 'Refrigerado', a_tiempo: 5553, retrasadas: 5501 },
     ]
   },
   {
     id: 5,
     antetitulo: "Escena 5: Decisión",
-    titulo: "Plan de acción sugerido",
-    descripcion: "Para resolver esto, recomendamos una expansión focalizada de la flota en las zonas Norte y Centro, junto con la implementación de rutas dinámicas para evadir el tráfico en horas pico, equilibrando así la carga.",
+    titulo: "Ruta de mejora hacia el SLA del 85%",
+    descripcion: "Reorientando la flota en Eje Cafetero y Bogotá, y optimizando las ventanas horarias en servicios Estándar y Express, la proyección técnica permite escalar del 50% al 85% de cumplimiento en un horizonte de 4 meses.",
     tipoGrafico: "line",
     datos: [
-      { name: 'Mes 1', proyectado: 30, objetivo: 25 },
-      { name: 'Mes 2', proyectado: 25, objetivo: 20 },
-      { name: 'Mes 3', proyectado: 20, objetivo: 18 },
-      { name: 'Mes 4', proyectado: 17, objetivo: 15 },
+      { name: 'Actual', proyectado: 50.0, meta: 85.0 },
+      { name: 'Mes 1', proyectado: 58.8, meta: 85.0 },
+      { name: 'Mes 2', proyectado: 67.5, meta: 85.0 },
+      { name: 'Mes 3', proyectado: 76.3, meta: 85.0 },
+      { name: 'Mes 4 (Meta)', proyectado: 85.0, meta: 85.0 },
     ]
   }
 ];
@@ -91,15 +91,35 @@ const ESCENAS = [
 const COLORS = ['#0d9488', '#14b8a6', '#5eead4', '#ccfbf1', '#99f6e4'];
 
 export default function HistoriaPage() {
+  const [escenas, setEscenas] = useState<any[]>(ESCENAS_BASE);
   const [escenaActiva, setEscenaActiva] = useState(1);
-  const escenaActual = ESCENAS.find(e => e.id === escenaActiva) || ESCENAS[0];
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/etl/historia")
+      .then(res => {
+        if (!res.ok) throw new Error("Error en la red");
+        return res.json();
+      })
+      .then(json => {
+        if (json.escenas && json.escenas.length > 0) {
+          setEscenas(json.escenas);
+        }
+      })
+      .catch(err => {
+        console.warn("Backend no disponible, usando respaldo local real", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const escenaActual = escenas.find(e => e.id === escenaActiva) || escenas[0];
 
   const handleAnterior = () => {
     if (escenaActiva > 1) setEscenaActiva(escenaActiva - 1);
   };
 
   const handleSiguiente = () => {
-    if (escenaActiva < ESCENAS.length) setEscenaActiva(escenaActiva + 1);
+    if (escenaActiva < escenas.length) setEscenaActiva(escenaActiva + 1);
   };
 
   const renderGrafico = () => {
@@ -157,7 +177,7 @@ export default function HistoriaPage() {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {escenaActual.datos.map((entry, index) => (
+                {escenaActual.datos.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -178,19 +198,12 @@ export default function HistoriaPage() {
       <header className="top-bar flex justify-between w-full">
         <div>
           <h1 className="page-title">Historia</h1>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Hito 3 – El Producto (E15-E16)</p>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Data Storytelling y Proyección Operativa</p>
         </div>
       </header>
 
       {/* ── CUERPO ─────────────────────────────────── */}
       <div className="content-container flex flex-col gap-6">
-        
-        {/* Banner Superior */}
-        <div className="bg-yellow-50 text-yellow-800 border border-yellow-200 p-4 rounded-lg">
-          <p className="font-medium text-sm">
-            Hito 3 • E15-E16 Cinco escenas: contexto, problema, detalle, causa y decisión...
-          </p>
-        </div>
 
         {/* Contenedor Principal (Tarjeta Blanca) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200" style={{ padding: '48px' }}>
@@ -200,7 +213,7 @@ export default function HistoriaPage() {
             
             {/* Círculos numéricos (1 al 5) */}
             <div className="flex gap-3">
-              {ESCENAS.map((escena) => (
+              {escenas.map((escena) => (
                 <button
                   key={escena.id}
                   onClick={() => setEscenaActiva(escena.id)}
@@ -229,9 +242,9 @@ export default function HistoriaPage() {
               </button>
               <button
                 onClick={handleSiguiente}
-                disabled={escenaActiva === ESCENAS.length}
+                disabled={escenaActiva === escenas.length}
                 className={`border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                  escenaActiva === ESCENAS.length ? 'opacity-50 cursor-not-allowed' : ''
+                  escenaActiva === escenas.length ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 Siguiente
