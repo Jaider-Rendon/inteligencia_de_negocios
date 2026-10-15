@@ -84,19 +84,22 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+import { useRole } from "@/context/RoleContext";
+
 /* ======================== PÁGINA ======================== */
 export default function Alertas() {
+  const { role }              = useRole();
   const [data, setData]       = useState<AlertasData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/etl/alertas")
+    fetch(`http://localhost:8000/api/etl/alertas?rol=${role}`)
       .then(r => { if (!r.ok) throw new Error(`Error ${r.status}`); return r.json(); })
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [role]);
 
   return (
     <>

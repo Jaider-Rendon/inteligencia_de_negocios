@@ -95,7 +95,21 @@ export default function Tablero() {
   const onRegionClick = (pl: any) => {
     if (!pl?.activePayload?.[0]) return;
     const r = pl.activePayload[0].payload.region;
-    setRegionSel(p => p === r ? null : r);
+    setRegionSel(p => {
+      const nuevo = p === r ? null : r;
+      if (nuevo) {
+        fetch("http://localhost:8000/api/etl/registrar-acceso", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rol: role,
+            seccion: "Tablero",
+            accion: `Drill-down: filtró servicios por región ${nuevo}`
+          })
+        }).catch(() => {});
+      }
+      return nuevo;
+    });
   };
 
   const fmtCOP = (v: number) => `$${v.toLocaleString("es-CO")}`;
@@ -140,18 +154,13 @@ export default function Tablero() {
       <header className="top-bar flex justify-between w-full">
         <div>
           <h1 className="page-title">Tablero</h1>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Hito 2 – Lo funcional (E10)</p>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Panel Principal de Métricas</p>
         </div>
         <GerentsSelector />
       </header>
 
       {/* ── CUERPO ─────────────────────────────────── */}
       <div className="content-container flex flex-col gap-6">
-        {/* ── BANNER ─────────────────────────────────── */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex gap-3 text-sm text-yellow-800 mb-2">
-          <span className="font-bold text-yellow-700 whitespace-nowrap">Hito 2 · E7-E9</span>
-          <p className="leading-snug">Pirámide invertida: arriba KPIs (3 segundos), en el medio tendencias y abajo el detalle. Los valores salen de los datos limpios del proyecto.</p>
-        </div>
 
         {/* NIVEL 1 – 4 KPIs */}
         <div className="grid grid-cols-4 gap-6">
@@ -266,13 +275,29 @@ export default function Tablero() {
                 <tbody>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 text-slate-700">Con el pico de agosto</td>
-                    <td className="py-3 text-right font-mono text-slate-600 font-medium">$2.755,8 M</td>
-                    <td className="py-3 text-right font-bold text-red-500">−10,3 %</td>
+                    <td className="py-3 text-right font-mono text-slate-600 font-medium">
+                      {data?.comparativa_anual ? fmtMilM(data.comparativa_anual.con_pico_2024) : "—"}
+                    </td>
+                    <td className={`py-3 text-right font-bold ${
+                      (data?.comparativa_anual?.con_pico_var_2025 ?? 0) >= 0 ? "text-emerald-600" : "text-red-500"
+                    }`}>
+                      {data?.comparativa_anual
+                        ? `${data.comparativa_anual.con_pico_var_2025 >= 0 ? "+" : ""}${data.comparativa_anual.con_pico_var_2025.toFixed(1)} %`
+                        : "—"}
+                    </td>
                   </tr>
                   <tr className="bg-amber-50">
                     <td className="py-3 pl-2 font-bold text-amber-900 border-l-4 border-amber-400">Agosto → mes típico</td>
-                    <td className="py-3 text-right font-mono font-bold text-amber-900">$2.541,9 M</td>
-                    <td className="py-3 text-right font-black text-amber-600 pr-1">−2,7 %</td>
+                    <td className="py-3 text-right font-mono font-bold text-amber-900">
+                      {data?.comparativa_anual ? fmtMilM(data.comparativa_anual.tipico_2024) : "—"}
+                    </td>
+                    <td className={`py-3 text-right font-black pr-1 ${
+                      (data?.comparativa_anual?.tipico_var_2025 ?? 0) >= 0 ? "text-emerald-600" : "text-amber-600"
+                    }`}>
+                      {data?.comparativa_anual
+                        ? `${data.comparativa_anual.tipico_var_2025 >= 0 ? "+" : ""}${data.comparativa_anual.tipico_var_2025.toFixed(1)} %`
+                        : "—"}
+                    </td>
                   </tr>
                 </tbody>
               </table>

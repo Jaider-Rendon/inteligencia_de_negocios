@@ -56,12 +56,12 @@ export default function Sidebar() {
       <div className="sidebar-header">
         <Link href="/" style={{ textDecoration: 'none' }}>
           <div className="brand-logo">MotoExpres BI</div>
-          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>Proyecto integrador - 251G8F</div>
+          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>Sistema de Inteligencia de Negocios</div>
         </Link>
       </div>
 
       <div className="sidebar-section">
-        <div className="section-title">Hito 1 - Los Datos</div>
+        <div className="section-title">DATOS Y CALIDAD</div>
         <ul className="nav-list">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
@@ -82,15 +82,14 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-section" style={{ marginTop: '0.5rem' }}>
-        <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>HITO 2 · LO FUNCIONAL</span>
-          <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 'bold' }}>E10</span>
+        <div className="section-title">
+          <span>PANEL Y ANÁLISIS</span>
         </div>
         <ul className="nav-list">
           <li className="nav-item">
             <Link
               href="/tablero"
-              className={`nav-link ${pathname === '/tablero' ? "hito2-active" : ""}`}
+              className={`nav-link ${pathname === '/tablero' ? "active" : ""}`}
             >
               <span className="nav-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -106,7 +105,7 @@ export default function Sidebar() {
           <li className="nav-item">
             <Link
               href="/explorar"
-              className={`nav-link ${pathname === '/explorar' ? "hito2-active" : ""}`}
+              className={`nav-link ${pathname === '/explorar' ? "active" : ""}`}
             >
               <span className="nav-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -120,7 +119,7 @@ export default function Sidebar() {
           <li className="nav-item">
             <Link
               href="/alertas"
-              className={`nav-link ${pathname === '/alertas' ? "hito2-active" : ""}`}
+              className={`nav-link ${pathname === '/alertas' ? "active" : ""}`}
             >
               <span className="nav-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -135,7 +134,7 @@ export default function Sidebar() {
           <li className="nav-item">
             <Link
               href="/accesos"
-              className={`nav-link ${pathname === '/accesos' ? "hito2-active" : ""}`}
+              className={`nav-link ${pathname === '/accesos' ? "active" : ""}`}
             >
               <span className="nav-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -152,9 +151,8 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-section" style={{ marginTop: '0.5rem' }}>
-        <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>HITO 3 · EL PRODUCTO</span>
-          <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 'bold' }}>E16</span>
+        <div className="section-title">
+          <span>REPORTES Y ESTRATEGIA</span>
         </div>
         <ul className="nav-list">
           <li className="nav-item">

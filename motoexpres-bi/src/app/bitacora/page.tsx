@@ -81,27 +81,12 @@ export default function BitacoraIAPage() {
       <header className="top-bar flex justify-between w-full">
         <div>
           <h1 className="page-title">Bitácora IA</h1>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Hito 3 – El Producto (E12)</p>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">MotoExpres BI · Auditoría y Registro de Consultas IA</p>
         </div>
       </header>
 
       {/* ── CUERPO ─────────────────────────────────── */}
       <div className="content-container flex flex-col gap-8">
-        
-        {/* Banner Superior */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-6 py-5 flex items-center gap-4 text-sm text-amber-900 shadow-sm">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-amber-600" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </div>
-          <div>
-            <span className="font-black text-amber-700 uppercase tracking-wider text-[11px] mb-1 block">Hito 3 · E12</span>
-            <p className="leading-relaxed font-medium">La bitácora no se trata de contar qué se le preguntó a la IA, sino de documentar <strong>cómo se verificó</strong> la respuesta obtenida.</p>
-          </div>
-        </div>
 
         {/* Tarjetas de KPIs (Grid de 4 columnas) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,7 +1,9 @@
 import sqlite3
 import os
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+from rutas.tablero import registrar_acceso
 
 router = APIRouter(prefix="/api/etl", tags=["Alertas"])
 
@@ -15,7 +17,7 @@ def get_conn():
 
 
 @router.get("/alertas")
-def obtener_alertas():
+def obtener_alertas(rol: Optional[str] = Query("gerencia_general")):
     """
     Endpoint de detección de anomalías (Hito 2 - E11).
 
@@ -23,6 +25,7 @@ def obtener_alertas():
       - grafico:  serie mensual de órdenes con flag es_anomalia (Z-score > 2)
       - alertas:  3 tarjetas: anomalía dinámica, estacionalidad, umbral de calidad
     """
+    registrar_acceso(rol, "Alertas", "Revisión de anomalías Z-Score y control de SLA")
     try:
         with get_conn() as conn:
 

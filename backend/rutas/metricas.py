@@ -22,11 +22,26 @@ def obtener_filtro_rol(rol: str) -> str:
         
     rol = rol.lower().strip()
     
-    # En la base de datos no hay una región 'Norte' literal, 
-    # sino 'Antioquia', 'Magdalena Medio', 'Bogotá', 'Valle', 'Eje Cafetero'.
-    # Usamos 'Antioquia' como equivalente para gerente_regional_norte.
-    if rol == "gerente_regional_norte" or rol == "gerente_regional_antioquia":
-        return " AND centro_id IN (SELECT centro_id FROM dim_centro WHERE region = 'Antioquia') "
+    region_raw = None
+    if rol.startswith("gerente_regional_"):
+        region_raw = rol.replace("gerente_regional_", "")
+    elif rol.startswith("regional_"):
+        region_raw = rol.replace("regional_", "")
+        
+    if region_raw:
+        region_nombre = region_raw.replace("_", " ").title()
+        if region_nombre in ["Bogota", "Bogotá"]:
+            region_nombre = "Bogotá"
+        elif region_nombre in ["Eje Cafetero", "Eje-Cafetero"]:
+            region_nombre = "Eje Cafetero"
+        elif region_nombre in ["Magdalena Medio", "Magdalena-Medio"]:
+            region_nombre = "Magdalena Medio"
+        elif region_nombre in ["Valle"]:
+            region_nombre = "Valle"
+        elif region_nombre in ["Antioquia", "Norte"]:
+            region_nombre = "Antioquia"
+            
+        return f" AND centro_id IN (SELECT centro_id FROM dim_centro WHERE region = '{region_nombre}') "
     return ""
 
 @router.get("/resumen")

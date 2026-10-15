@@ -53,8 +53,11 @@ const BarLabel = (props: any) => {
   );
 };
 
+import { useRole } from "@/context/RoleContext";
+
 /* ======================== PÁGINA ======================== */
 export default function Explorar() {
+  const { role }              = useRole();
   const [region, setRegion]   = useState("Valle");
   const [data, setData]       = useState<ExplorarData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,7 @@ export default function Explorar() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`http://localhost:8000/api/etl/explorar?region=${encodeURIComponent(region)}`)
+    fetch(`http://localhost:8000/api/etl/explorar?region=${encodeURIComponent(region)}&rol=${role}`)
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`);
         return r.json();
@@ -71,7 +74,7 @@ export default function Explorar() {
       .then(d => setData(d))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, [region]);
+  }, [region, role]);
 
   const ttStyle = {
     backgroundColor: "var(--bg-card)",

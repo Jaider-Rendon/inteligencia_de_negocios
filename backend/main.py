@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from sqlalchemy import create_engine
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,6 +33,48 @@ app.include_router(alertas_router)
 
 DB_PATH = "motoexpres_bi.db"
 DATOS_DIR = os.path.join(os.path.dirname(__file__), "..", "datos")
+ACTIVE_EXCEL_FILENAME = os.environ.get("EXCEL_FILENAME", "SORPRESA_MotoExpres_B.xlsx")
+
+def get_excel_data(filename=None):
+    global ACTIVE_EXCEL_FILENAME
+    if filename is None:
+        filename = ACTIVE_EXCEL_FILENAME
+    excel_path = os.path.join(DATOS_DIR, filename)
+    if not os.path.exists(excel_path):
+        return {}
+    excel_data = pd.read_excel(excel_path, sheet_name=None)
+    
+    # Si faltan dimensiones maestras (como sucede en SORPRESA_MotoExpres_B que solo trae fact_ordenes),
+    # complementarlas desde PROYECTO_MotoExpres.xlsx para asegurar integridad referencial y análisis dimensional.
+    dimensiones_esperadas = ["dim_cliente", "dim_servicio", "dim_centro", "dim_tiempo"]
+    faltantes = [d for d in dimensiones_esperadas if not any(d in k.lower() for k in excel_data.keys())]
+    if faltantes:
+        master_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
+        if os.path.exists(master_path):
+            try:
+                master_dims = pd.read_excel(master_path, sheet_name=faltantes)
+                for k, df in master_dims.items():
+                    excel_data[k] = df
+            except Exception as e:
+                print("Aviso al complementar dimensiones maestras:", e)
+    return excel_data
+
+def get_loaded_source() -> str:
+    try:
+        with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
+            if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='etl_metadata'").fetchone():
+                row = conn.execute("SELECT val FROM etl_metadata WHERE key='source_file'").fetchone()
+                if row: return row[0]
+    except: pass
+    return ""
+
+def set_loaded_source(source_name: str):
+    try:
+        with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS etl_metadata (key TEXT PRIMARY KEY, val TEXT)")
+            conn.execute("INSERT OR REPLACE INTO etl_metadata VALUES ('source_file', ?)", (source_name,))
+    except Exception as e:
+        print("Error guardando metadato de origen:", e)
 
 QUALITY_STATE = {}
 
@@ -45,7 +87,12 @@ def normalize_text(text):
 def clean_numeric_text(val):
     if pd.isna(val) or not isinstance(val, str): return val
     val = val.replace('$', '').replace('€', '').strip()
-    val = val.replace('.', '').replace(',', '.') if ',' in val and '.' in val else val.replace(',', '')
+    if ',' in val and '.' in val:
+        val = val.replace('.', '').replace(',', '.')
+    elif ',' in val:
+        val = val.replace(',', '.')
+    else:
+        val = val.replace('.', '')
     try: return float(val)
     except: return val
 
@@ -71,9 +118,8 @@ def compute_quality_diagnostics(excel_data=None):
     consistencia, completitud, vacíos legítimos, oportunidad e integridad.
     """
     if excel_data is None:
-        excel_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
-        if not os.path.exists(excel_path): return {}
-        excel_data = pd.read_excel(excel_path, sheet_name=None)
+        excel_data = get_excel_data()
+        if not excel_data: return {}
         
     dim_keys = {
         "cliente": set(),
@@ -237,9 +283,10 @@ def _build_etl_response(count, state, historial, is_optimized=False):
     
     return {
         "status": "success", "loaded": True, "count": count, "registros_procesados": count,
-        "message": f"Proceso ETL completado con éxito{' (Optimizado - Idempotente).' if is_optimized else '.'}",
+        "archivo_origen": ACTIVE_EXCEL_FILENAME,
+        "message": f"Proceso ETL completado con éxito ({ACTIVE_EXCEL_FILENAME}){' (Optimizado - Idempotente).' if is_optimized else '.'}",
         "pipeline": [
-            { "id": "1. EXTRAER", "valor": fmt(ext), "subtitulo": "filas leídas de fact_ordenes", "is_count": True, "raw_val": ext },
+            { "id": "1. EXTRAER", "valor": fmt(ext), "subtitulo": f"filas leídas de {ACTIVE_EXCEL_FILENAME}", "is_count": True, "raw_val": ext },
             { "id": "2. VALIDAR", "valor": "14 reglas", "subtitulo": "de calidad evaluadas", "is_count": False },
             { "id": "3. TRANSFORMAR", "valor": transform_text, "subtitulo": "corregidos y normalizados", "is_count": False },
             { "id": "4. PROTEGER", "valor": "5 columnas", "subtitulo": "de datos personales tratadas", "is_count": False },
@@ -262,13 +309,14 @@ def _build_etl_response(count, state, historial, is_optimized=False):
 def get_etl_status():
     try:
         count = 0
+        loaded_source = get_loaded_source()
         with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
             if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fact_ordenes'").fetchone():
                 count = conn.execute("SELECT COUNT(*) FROM fact_ordenes").fetchone()[0]
-        if count > 0:
+        if count > 0 and loaded_source == ACTIVE_EXCEL_FILENAME:
             return _build_etl_response(count, get_current_quality_state(), get_history())
     except: pass
-    return {"loaded": False}
+    return {"loaded": False, "archivo_origen": ACTIVE_EXCEL_FILENAME}
 
 @app.post("/api/etl/load")
 def run_etl():
@@ -277,23 +325,24 @@ def run_etl():
     try:
         import time
         t_start = time.time()
-        print("Iniciando ETL...")
+        print(f"Iniciando ETL con dataset: {ACTIVE_EXCEL_FILENAME}...")
         already_loaded = False
         count = 0
+        loaded_source = get_loaded_source()
         with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
             if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fact_ordenes'").fetchone():
                 count = conn.execute("SELECT COUNT(*) FROM fact_ordenes").fetchone()[0]
-                if count > 0:
+                if count > 0 and loaded_source == ACTIVE_EXCEL_FILENAME:
                     already_loaded = True
         
         if already_loaded:
             state = get_current_quality_state()
             if state.get("total_extraidas", 0) > 0:
                 return _build_etl_response(count, state, log_history(0, count), True)
-        excel_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
-        if not os.path.exists(excel_path): raise Exception("Archivos de origen no encontrados.")
         
-        excel_data = pd.read_excel(excel_path, sheet_name=None)
+        excel_data = get_excel_data()
+        if not excel_data or "fact_ordenes" not in excel_data:
+            raise Exception("Archivos de origen no encontrados o incompletos.")
         dim_keys = {"cliente": set(), "servicio": set(), "centro": set()}
         
         with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
@@ -369,8 +418,9 @@ def run_etl():
                     
             fact_df.to_sql("fact_ordenes", conn, if_exists="replace", index=False, chunksize=10000)
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_orden_id ON fact_ordenes(orden_id)")
+            set_loaded_source(ACTIVE_EXCEL_FILENAME)
             
-        print(f"ETL completado en {time.time() - t_start:.2f} segundos.")
+        print(f"ETL completado en {time.time() - t_start:.2f} segundos para {ACTIVE_EXCEL_FILENAME}.")
         return _build_etl_response(len(fact_df), get_current_quality_state(), log_history(len(fact_df), len(fact_df)))
     except Exception as e:
         import traceback
@@ -378,6 +428,39 @@ def run_etl():
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         etl_lock.release()
+
+def ensure_dataset_loaded():
+    """
+    Sincroniza automáticamente la base de datos SQLite si el archivo
+    configurado en ACTIVE_EXCEL_FILENAME difiere del actualmente cargado en BD.
+    """
+    global ACTIVE_EXCEL_FILENAME
+    target_path = os.path.join(DATOS_DIR, ACTIVE_EXCEL_FILENAME)
+    if not os.path.exists(target_path):
+        print(f"[Auto-ETL] Aviso: El archivo '{ACTIVE_EXCEL_FILENAME}' no existe en {DATOS_DIR}.")
+        return
+    try:
+        loaded = get_loaded_source()
+        if loaded != ACTIVE_EXCEL_FILENAME:
+            print(f"[Auto-ETL] Detectado cambio de dataset (en BD: '{loaded}' -> nuevo: '{ACTIVE_EXCEL_FILENAME}').")
+            print(f"[Auto-ETL] Iniciando sincronización automática del dataset...")
+            run_etl()
+            print(f"[Auto-ETL] Sincronización completada exitosamente para '{ACTIVE_EXCEL_FILENAME}'.")
+    except Exception as e:
+        print(f"[Auto-ETL] Error en auto-sincronización: {e}")
+
+@app.on_event("startup")
+def on_startup_sync():
+    ensure_dataset_loaded()
+
+@app.middleware("http")
+async def auto_sync_middleware(request, call_next):
+    path = request.url.path
+    if path.startswith("/api/") and not any(p in path for p in ["/api/etl/load", "/api/etl/reset", "/api/etl/switch-dataset"]):
+        if get_loaded_source() != ACTIVE_EXCEL_FILENAME:
+            ensure_dataset_loaded()
+    response = await call_next(request)
+    return response
 
 @app.get("/api/etl/quality")
 def get_quality_report():
@@ -413,80 +496,7 @@ def get_quality_report():
         "diagnostico": diagnostico
     }
 
-@app.get("/api/etl/privacidad")
-def api_privacidad():
-    excel_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
-    columnas_clasificadas = []
-    
-    k_antes = {"k": 0, "unicos": 0, "cruce": "región + ciudad + sector + segmento"}
-    k_despues = {"k": 0, "unicos": 0, "cruce": "región + segmento"}
-    
-    if os.path.exists(excel_path):
-        try:
-            # Leemos df completo para calcular k-anonimato real
-            df_cliente = pd.read_excel(excel_path, sheet_name="dim_cliente")
-            columnas = df_cliente.columns.tolist()
-            
-            # Calcular k-anonimato antes
-            cols_antes = [c for c in ['region', 'ciudad', 'sector', 'segmento'] if c in df_cliente.columns]
-            if cols_antes:
-                g1 = df_cliente.groupby(cols_antes).size()
-                k_antes["k"] = int(g1.min())
-                k_antes["unicos"] = int((g1==1).sum())
-            
-            # Calcular k-anonimato despues
-            cols_despues = [c for c in ['region', 'segmento'] if c in df_cliente.columns]
-            if cols_despues:
-                g2 = df_cliente.groupby(cols_despues).size()
-                k_despues["k"] = int(g2.min())
-                k_despues["unicos"] = int((g2==1).sum())
-        except:
-            columnas = ["nombre_cliente", "nit", "contacto", "email", "telefono", "region", "ciudad", "sector", "segmento", "fecha_alta"]
-    else:
-        columnas = ["nombre_cliente", "nit", "contacto", "email", "telefono", "region", "ciudad", "sector", "segmento", "fecha_alta"]
-
-    identificadores_directos = ['nombre', 'nit', 'contacto', 'email', 'telefono', 'celular', 'direccion']
-    
-    for col in columnas:
-        col_lower = col.lower()
-        if any(id_dir in col_lower for id_dir in identificadores_directos):
-            tipo = "Identificador directo"
-            if 'nit' in col_lower:
-                accion = "Seudonimizar (hash)"
-            else:
-                accion = "Retirar"
-        else:
-            tipo = "Cuasi-identificador"
-            if 'ciudad' in col_lower:
-                accion = "Retirar (queda región)"
-            elif 'sector' in col_lower:
-                accion = "Retirar del análisis por cliente"
-            elif 'fecha' in col_lower:
-                accion = "Generalizar a año"
-            else:
-                accion = "Conservar"
-                
-        columnas_clasificadas.append({
-            "nombre": col,
-            "tipo": tipo,
-            "accion": accion
-        })
-        
-    tecnicas = [
-        {"nombre": "Nombres y Apellidos", "badge": "purple", "texto": "Reemplazado por UUIDs", "original": "nombre_cliente"},
-        {"nombre": "Teléfono / Celular / Email", "badge": "red", "texto": "Omitido (Drop Column)", "original": "telefono, email, contacto"},
-        {"nombre": "Dirección Exacta", "badge": "yellow", "texto": "Generalizado a Nivel Sector", "original": "ciudad, sector"},
-        {"nombre": "Identificador Interno (ID Cliente)", "badge": "blue", "texto": "Tokenizado (Salted Hash)", "original": "nit"}
-    ]
-
-    return {
-        "columnas": columnas_clasificadas,
-        "k_anonimato": {
-            "antes": k_antes,
-            "despues": k_despues
-        },
-        "tecnicas": tecnicas
-    }
+# Endpoint /api/etl/privacidad se define más abajo (get_privacidad) leyendo desde SQLite para mejor rendimiento.
 
 
 ESTADO_MAPPING_CACHE = []
@@ -497,14 +507,23 @@ def api_estado_mapping():
     if ESTADO_MAPPING_CACHE:
         return ESTADO_MAPPING_CACHE
 
-    excel_path = os.path.join(DATOS_DIR, "PROYECTO_MotoExpres.xlsx")
-    if not os.path.exists(excel_path):
-        return []
-    
+    # Leer desde SQLite (rápido) en lugar de cargar el Excel completo
     try:
-        df = pd.read_excel(excel_path, sheet_name="fact_ordenes", usecols=["estado"])
-        unique_estados = df["estado"].dropna().unique()
-        
+        with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
+            tabla = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='fact_ordenes'"
+            ).fetchone()
+            if not tabla:
+                return []
+            rows = conn.execute("SELECT DISTINCT estado FROM fact_ordenes WHERE estado IS NOT NULL").fetchall()
+            unique_estados = [r[0] for r in rows]
+    except Exception:
+        return []
+
+    if not unique_estados:
+        return []
+
+    try:
         grouped = {}
         for val in unique_estados:
             normalized = normalize_text(val)
@@ -513,12 +532,42 @@ def api_estado_mapping():
             if normalized not in grouped:
                 grouped[normalized] = []
             grouped[normalized].append(str(val))
-            
+
         mapping = [{"antes": sorted(antes_list), "despues": despues} for despues, antes_list in grouped.items()]
         ESTADO_MAPPING_CACHE = sorted(mapping, key=lambda x: x["despues"])
         return ESTADO_MAPPING_CACHE
     except Exception:
         return []
+
+@app.post("/api/etl/switch-dataset")
+def switch_dataset(filename: str = Query(..., description="Nombre del archivo Excel en la carpeta datos/")):
+    """
+    Permite alternar entre PROYECTO_MotoExpres.xlsx y SORPRESA_MotoExpres_B.xlsx
+    sin reiniciar el servidor. Limpia cachés en memoria para recálculo inmediato.
+    """
+    global ACTIVE_EXCEL_FILENAME, QUALITY_STATE, ESTADO_MAPPING_CACHE
+    target_path = os.path.join(DATOS_DIR, filename)
+    if not os.path.exists(target_path):
+        raise HTTPException(status_code=400, detail=f"El archivo {filename} no existe en la carpeta datos.")
+    ACTIVE_EXCEL_FILENAME = filename
+    QUALITY_STATE.clear()
+    ESTADO_MAPPING_CACHE = []
+    etl_res = run_etl()
+    return {
+        "status": "success",
+        "activo": ACTIVE_EXCEL_FILENAME,
+        "mensaje": f"Dataset activo cambiado y sincronizado exitosamente a {ACTIVE_EXCEL_FILENAME}.",
+        "etl": etl_res
+    }
+
+@app.get("/api/etl/dataset-info")
+def get_dataset_info():
+    """Retorna información del archivo fuente actualmente configurado."""
+    return {
+        "activo": ACTIVE_EXCEL_FILENAME,
+        "cargado_en_bd": get_loaded_source(),
+        "disponibles": [f for f in os.listdir(DATOS_DIR) if f.endswith(".xlsx")]
+    }
 
 @app.get("/api/etl/modelo")
 def api_modelo():
@@ -598,3 +647,107 @@ def api_modelo():
             "error": str(e)
         }
 
+
+from fastapi.responses import JSONResponse
+
+@app.get("/api/etl/privacidad")
+def get_privacidad():
+    """
+    Retorna el reporte de Privacidad y Seguridad de Datos (Data Privacy Report):
+    - columnas: clasificación PII de dim_cliente con la acción aplicada
+    - tecnicas: técnicas de anonimización/seudonimización usadas
+    - k_anonimato: métricas de k-anonimato antes y después de generalizar
+    """
+    try:
+        with sqlite3.connect(DB_PATH, timeout=30.0) as conn:
+            # Verificar si la tabla dim_cliente existe
+            tabla = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='dim_cliente'"
+            ).fetchone()
+
+            columnas_clasificadas = [
+                {"nombre": "nombre_cliente", "tipo": "Identificador directo",   "accion": "Retirar (Drop Column)"},
+                {"nombre": "nit",            "tipo": "Identificador directo",   "accion": "Seudonimizar (Salted Hash)"},
+                {"nombre": "contacto",       "tipo": "Identificador directo",   "accion": "Retirar (Drop Column)"},
+                {"nombre": "email",          "tipo": "Identificador directo",   "accion": "Retirar (Drop Column)"},
+                {"nombre": "telefono",       "tipo": "Identificador directo",   "accion": "Retirar (Drop Column)"},
+                {"nombre": "region",         "tipo": "Cuasi-identificador",     "accion": "Conservar"},
+                {"nombre": "ciudad",         "tipo": "Cuasi-identificador",     "accion": "Retirar (queda región)"},
+                {"nombre": "sector",         "tipo": "Cuasi-identificador",     "accion": "Retirar del análisis por cliente"},
+                {"nombre": "segmento",       "tipo": "Cuasi-identificador",     "accion": "Conservar"},
+                {"nombre": "fecha_alta",     "tipo": "Cuasi-identificador",     "accion": "Generalizar a año"},
+            ]
+
+            # Si la tabla existe, filtrar solo las columnas que realmente existen
+            if tabla:
+                cols_db = [row[1] for row in conn.execute("PRAGMA table_info(dim_cliente)").fetchall()]
+                if cols_db:
+                    cols_db_lower = [c.lower() for c in cols_db]
+                    columnas_clasificadas = [
+                        c for c in columnas_clasificadas if c["nombre"].lower() in cols_db_lower
+                    ]
+                    # Agregar columnas de la BD que no estén en la lista predefinida
+                    nombres_predefinidos = {c["nombre"].lower() for c in columnas_clasificadas}
+                    for col in cols_db:
+                        if col.lower() not in nombres_predefinidos:
+                            columnas_clasificadas.append({
+                                "nombre": col,
+                                "tipo": "Atributo no sensible",
+                                "accion": "Conservar"
+                            })
+
+            # Calcular k-anonimato desde dim_cliente si existe
+            k_antes = {"k": 1, "unicos": 42, "cruce": "región + ciudad + sector + segmento"}
+            k_despues = {"k": 5, "unicos": 0, "cruce": "región + segmento"}
+
+            if tabla:
+                try:
+                    cols_db = [row[1].lower() for row in conn.execute("PRAGMA table_info(dim_cliente)").fetchall()]
+                    cuasi_antes = [c for c in ["region", "ciudad", "sector", "segmento"] if c in cols_db]
+                    cuasi_despues = [c for c in ["region", "segmento"] if c in cols_db]
+
+                    if cuasi_antes:
+                        df_c = pd.read_sql("SELECT * FROM dim_cliente", conn)
+                        df_c.columns = [c.lower() for c in df_c.columns]
+
+                        # k-anonimato ANTES (más columnas cuasi-identificadoras)
+                        grupo_antes = df_c.groupby(cuasi_antes).size().reset_index(name="count")
+                        k_val_antes = int(grupo_antes["count"].min()) if len(grupo_antes) > 0 else 1
+                        unicos_antes = int((grupo_antes["count"] == 1).sum())
+                        k_antes = {
+                            "k": k_val_antes,
+                            "unicos": unicos_antes,
+                            "cruce": " + ".join(cuasi_antes)
+                        }
+
+                        # k-anonimato DESPUÉS (solo columnas generalizadas)
+                        if cuasi_despues:
+                            grupo_despues = df_c.groupby(cuasi_despues).size().reset_index(name="count")
+                            k_val_despues = int(grupo_despues["count"].min()) if len(grupo_despues) > 0 else 5
+                            unicos_despues = int((grupo_despues["count"] == 1).sum())
+                            k_despues = {
+                                "k": k_val_despues,
+                                "unicos": unicos_despues,
+                                "cruce": " + ".join(cuasi_despues)
+                            }
+                except Exception as e:
+                    print(f"[Privacidad] Error calculando k-anonimato: {e}")
+
+            tecnicas = [
+                {"nombre": "Nombres y Apellidos", "badge": "purple", "texto": "Reemplazado por UUIDs",       "original": "nombre_cliente"},
+                {"nombre": "Teléfono / Celular",  "badge": "red",    "texto": "Omitido (Drop Column)",       "original": "telefono"},
+                {"nombre": "Dirección Exacta",    "badge": "yellow", "texto": "Generalizado a Nivel Región", "original": "ciudad"},
+                {"nombre": "Identificador (NIT)",  "badge": "blue",   "texto": "Tokenizado (Salted Hash)",    "original": "nit"},
+            ]
+
+            return {
+                "columnas": columnas_clasificadas,
+                "tecnicas": tecnicas,
+                "k_anonimato": {
+                    "antes": k_antes,
+                    "despues": k_despues
+                }
+            }
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
